@@ -1,4 +1,5 @@
 ﻿using System.Collections;
+using System.IO;
 using Mirror;
 using Newtonsoft.Json;
 using UnityEngine;
@@ -31,22 +32,6 @@ namespace Runtime
             }
         }
 
-        private void Start()
-        {
-#if UNITY_SERVER
-            SendPostRequest(new ServerStatus()
-            {
-                name = "UnityGameServer",
-                ip = "localhost",
-                maxConnections = 1,
-                location = "EU",
-                status = "Ok"
-            });
-            NetworkManager.singleton.StartServer();
-            Debug.Log("Networkmanager: Started server!");
-#endif
-        }
-
         public void SendGetRequest()
         {
             StartCoroutine(GetRequest());
@@ -70,7 +55,7 @@ namespace Runtime
             }
         }
 
-#if UNITY_SERVER
+#if UNITY_SERVER || UNITY_EDITOR
         public void SendPostRequest(ServerStatus status)
         {
             StartCoroutine(PostRequest(status));
@@ -79,7 +64,7 @@ namespace Runtime
 
         private IEnumerator PostRequest(ServerStatus status)
         {
-            var key = "ozShHLD0shAEzxf6uaUXQDg8YNqOufoR"; //TODO: Don't put this in code
+            var key = FetchServerKey();
             var postData = new
             {
                 data = status,
@@ -106,6 +91,15 @@ namespace Runtime
                     Debug.Log("Success: " + webRequest.downloadHandler.text);
                 }
             }
+        }
+
+        private string FetchServerKey()
+        {
+            string path = "data/server_key.txt";
+            StreamReader reader = new StreamReader(path);
+            var key = reader.ReadToEnd();
+            reader.Close();
+            return key;
         }
 #endif
 

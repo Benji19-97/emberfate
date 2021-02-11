@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace Runtime
 {
-    public class GameInitializer : MonoBehaviour
+    public class SteamInitializer : MonoBehaviour
     {
         [SerializeField] private GameObject mainMenuCanvas;
 
