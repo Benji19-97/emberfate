@@ -110,7 +110,7 @@ namespace Runtime
                 }
                 else
                 {
-                    HandleTokenValidation(conn, webRequest.downloadHandler.text, ticket, steamid);
+                    HandleTokenValidation(conn, webRequest.downloadHandler.text, steamid);
                 }
             }
             catch (Exception e)
@@ -137,7 +137,7 @@ namespace Runtime
         }
 
 
-        private void HandleTokenValidation(NetworkConnection conn, string text, string ticket, string steamId)
+        private void HandleTokenValidation(NetworkConnection conn, string text, string steamId)
         {
             try
             {
@@ -198,12 +198,12 @@ namespace Runtime
         {
             if (string.IsNullOrEmpty(msg.FailReason))
             {
-                Debug.Log("Authenticator success. Player may connect.");
+                Debug.Log("Authentication successful. Connecting to game server.");
                 OnClientAuthenticated.Invoke(conn);
             }
             else
             {
-                Debug.LogError("Authenticator failed " + msg.FailReason);
+                Debug.LogError("Authentication failed: " + msg.FailReason);
                 NetworkClient.Disconnect();
             }
         }

@@ -1,9 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using Mirror;
-#if !UNITY_SERVER
-using Steamworks;
-#endif
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -14,11 +11,11 @@ namespace Runtime.UI
         [SerializeField] private Dropdown serverDropdown;
 
 #if !UNITY_SERVER
-        protected Callback<GetAuthSessionTicketResponse_t> GetAuthSessionTicketResponse;
+        protected Steamworks.Callback<Steamworks.GetAuthSessionTicketResponse_t> GetAuthSessionTicketResponse;
         
         private byte[] _ticket;
         private uint _pcbTicket;
-        private HAuthTicket _hAuthTicket;
+        private Steamworks.HAuthTicket _hAuthTicket;
 
 
         private void Start()
@@ -26,7 +23,7 @@ namespace Runtime.UI
             ServerStatusService.Instance.serverStatusReceived.AddListener(UpdateServerDropdownList);
             serverDropdown.onValueChanged.AddListener(OnSelectServer);
             ServerStatusService.Instance.SendGetRequest();
-            GetAuthSessionTicketResponse = Callback<GetAuthSessionTicketResponse_t>.Create(OnGetAuthSessionTicketResponse);
+            GetAuthSessionTicketResponse = Steamworks.Callback<Steamworks.GetAuthSessionTicketResponse_t>.Create(OnGetAuthSessionTicketResponse);
 
         }
 
@@ -57,13 +54,13 @@ namespace Runtime.UI
         {
 
             _ticket = new byte[1024];
-            _hAuthTicket = SteamUser.GetAuthSessionTicket(_ticket, 1024, out _pcbTicket);
+            _hAuthTicket = Steamworks.SteamUser.GetAuthSessionTicket(_ticket, 1024, out _pcbTicket);
 
         }
 
-        private void OnGetAuthSessionTicketResponse(GetAuthSessionTicketResponse_t pCallback)
+        private void OnGetAuthSessionTicketResponse(Steamworks.GetAuthSessionTicketResponse_t pCallback)
         {
-            if (pCallback.m_eResult == EResult.k_EResultOK)
+            if (pCallback.m_eResult == Steamworks.EResult.k_EResultOK)
             {
                 SteamTokenAuthenticator.AuthTicket = GetHexStringFromByteArray(_ticket);
                 NetworkManager.singleton.StartClient();
