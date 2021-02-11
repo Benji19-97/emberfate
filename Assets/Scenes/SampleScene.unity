@@ -304,7 +304,7 @@ MonoBehaviour:
       m_Calls:
       - m_Target: {fileID: 745643088}
         m_MethodName: SendGetRequest
-        m_Mode: 5
+        m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
           m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
@@ -430,6 +430,7 @@ MonoBehaviour:
   serverStatusReceived:
     m_PersistentCalls:
       m_Calls: []
+  uri: http://localhost:3001/api/server-status
 --- !u!4 &745643089
 Transform:
   m_ObjectHideFlags: 0

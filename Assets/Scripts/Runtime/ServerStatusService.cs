@@ -12,10 +12,12 @@ namespace Runtime
     {
         public static ServerStatusService Instance { get; private set; }
 
-        public UnityEvent serverStatusReceived;
-        
         public ServerStatus[] serverStatus { get; private set; }
-        
+
+        [HideInInspector] public UnityEvent serverStatusReceived;
+
+        [SerializeField] private string uri;
+
 
         private void Awake()
         {
@@ -30,17 +32,27 @@ namespace Runtime
             }
         }
 
-        public void SendGetRequest(string uri)
+        private void Start()
         {
-            StartCoroutine(GetRequest(uri));
+            SendPostRequest(new ServerStatus()
+            {
+                name = "UnityGameServer",
+                ip = "localhost",
+                maxConnections = 1,
+                location = "EU",
+                status = "Ok"
+            });
         }
 
-        private IEnumerator GetRequest(string uri)
+        public void SendGetRequest()
+        {
+            StartCoroutine(GetRequest());
+        }
+
+        private IEnumerator GetRequest()
         {
             using (UnityWebRequest webRequest = UnityWebRequest.Get(uri))
             {
-                // webRequest.useHttpContinue = false;
-                
                 yield return webRequest.SendWebRequest();
 
                 if (webRequest.isNetworkError)
@@ -51,8 +63,47 @@ namespace Runtime
                 {
                     serverStatus = JsonConvert.DeserializeObject<ServerStatus[]>(webRequest.downloadHandler.text);
                     serverStatusReceived.Invoke();
+                    Debug.Log(serverStatus.First().name);
                 }
             }
         }
+
+#if UNITY_SERVER || UNITY_EDITOR
+        public void SendPostRequest(ServerStatus status)
+        {
+            StartCoroutine(PostRequest(status));
+        }
+
+        private IEnumerator PostRequest(ServerStatus status)
+        {
+            var key = "ozShHLD0shAEzxf6uaUXQDg8YNqOufoR"; //TODO: Don't put this in code
+            var postData = new
+            {
+                data = status,
+                key
+            };
+            
+            var postDataJson = JsonConvert.SerializeObject(postData);
+
+            using (UnityWebRequest webRequest = new UnityWebRequest(uri, "POST"))
+            {
+                byte[] jsonToSend = new System.Text.UTF8Encoding().GetBytes(postDataJson);
+                webRequest.uploadHandler = new UploadHandlerRaw(jsonToSend);
+                webRequest.downloadHandler = new DownloadHandlerBuffer();
+                webRequest.SetRequestHeader("Content-Type", "application/json");
+                
+                yield return webRequest.SendWebRequest();
+
+                if (webRequest.isNetworkError)
+                {
+                    Debug.Log("Error while Sending: " + webRequest.error);
+                }
+                else
+                {
+                    Debug.Log("Success: " + webRequest.downloadHandler.text);
+                }
+            }
+        }
+#endif
     }
 }
