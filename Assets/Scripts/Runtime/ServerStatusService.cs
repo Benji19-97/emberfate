@@ -42,6 +42,8 @@ namespace Runtime
                 location = "EU",
                 status = "Ok"
             });
+            
+            
         }
 
         public void SendGetRequest()
@@ -63,7 +65,6 @@ namespace Runtime
                 {
                     serverStatus = JsonConvert.DeserializeObject<ServerStatus[]>(webRequest.downloadHandler.text);
                     serverStatusReceived.Invoke();
-                    Debug.Log(serverStatus.First().name);
                 }
             }
         }
