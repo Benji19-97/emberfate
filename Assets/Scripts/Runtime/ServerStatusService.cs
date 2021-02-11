@@ -39,7 +39,7 @@ namespace Runtime
         {
             using (UnityWebRequest webRequest = UnityWebRequest.Get(uri))
             {
-                webRequest.useHttpContinue = false;
+                // webRequest.useHttpContinue = false;
                 
                 yield return webRequest.SendWebRequest();
 
