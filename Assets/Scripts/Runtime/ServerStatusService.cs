@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Linq;
+using Mirror;
 using Newtonsoft.Json;
 using UnityEngine;
 using UnityEngine.Events;
@@ -34,6 +35,7 @@ namespace Runtime
 
         private void Start()
         {
+#if UNITY_SERVER
             SendPostRequest(new ServerStatus()
             {
                 name = "UnityGameServer",
@@ -42,8 +44,9 @@ namespace Runtime
                 location = "EU",
                 status = "Ok"
             });
-            
-            
+            NetworkManager.singleton.StartServer();
+            Debug.Log("Netowkrmanager: Started server!");
+#endif
         }
 
         public void SendGetRequest()
@@ -69,10 +72,11 @@ namespace Runtime
             }
         }
 
-#if UNITY_SERVER || UNITY_EDITOR
+#if UNITY_SERVER
         public void SendPostRequest(ServerStatus status)
         {
             StartCoroutine(PostRequest(status));
+            Debug.Log("Sent post request!");
         }
 
         private IEnumerator PostRequest(ServerStatus status)
@@ -83,7 +87,7 @@ namespace Runtime
                 data = status,
                 key
             };
-            
+
             var postDataJson = JsonConvert.SerializeObject(postData);
 
             using (UnityWebRequest webRequest = new UnityWebRequest(uri, "POST"))
@@ -92,7 +96,7 @@ namespace Runtime
                 webRequest.uploadHandler = new UploadHandlerRaw(jsonToSend);
                 webRequest.downloadHandler = new DownloadHandlerBuffer();
                 webRequest.SetRequestHeader("Content-Type", "application/json");
-                
+
                 yield return webRequest.SendWebRequest();
 
                 if (webRequest.isNetworkError)
@@ -106,5 +110,12 @@ namespace Runtime
             }
         }
 #endif
+
+        private void OnApplicationQuit()
+        {
+#if UNITY_SERVER || UNITY_EDITOR
+            NetworkManager.singleton.StopServer();
+#endif
+        }
     }
 }

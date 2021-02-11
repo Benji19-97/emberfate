@@ -60,3 +60,5 @@ crashlytics-build.properties
 
 
 .idea/
+
+Assets/Server/web_api_key.txt
