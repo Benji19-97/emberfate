@@ -10,7 +10,7 @@ namespace Runtime
 {
     public class GameServer : MonoBehaviour
     {
-#if UNITY_SERVER || UNITY_EDITOR
+#if UNITY_SERVER
 
         public static GameServer Instance { get; private set; }
         
@@ -51,7 +51,7 @@ namespace Runtime
             NetworkManager.singleton.networkAddress = Config.ip;
             NetworkManager.singleton.GetComponent<KcpTransport>().Port = (ushort) Config.port;
             NetworkManager.singleton.StartServer();
-            Debug.Log($"NetworkManager: Started server! \n name: {Config.name}\n ip: {Config.ip}:{Config.port} \n maxConnections: {Config.maxConnections}\n location: {Config.location}\n");
+            Debug.Log($"NetworkManager: Started server!\nname: {Config.name}\nip: {Config.ip}:{Config.port} \nmaxConnections: {Config.maxConnections}\nlocation: {Config.location}\n");
         }
 
 #endif
