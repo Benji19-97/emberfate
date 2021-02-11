@@ -28,7 +28,9 @@ namespace Runtime
 
         private struct AuthResponseMessage : NetworkMessage
         {
+#pragma warning disable 649
             public string FailReason;
+#pragma warning restore 649
         }
 
         [Serializable]
@@ -65,12 +67,13 @@ namespace Runtime
 
         private void OnAuthRequestMessage(NetworkConnection conn, AuthRequestMessage msg)
         {
+            Debug.Log("Received auth request message from steamId " + msg.SteamId);
             StartCoroutine(__ValidateToken(conn, msg.Ticket, msg.SteamId));
         }
 
         private IEnumerator __ValidateToken(NetworkConnection conn, string ticket, string steamid)
         {
-            string parameters;
+            string uri;
             UnityWebRequest webRequest;
         
             try
@@ -85,18 +88,20 @@ namespace Runtime
                     FetchAppId();
                 }
 
-                parameters = $"?key={_webAPIKey}&ticket={ticket}&appid={_appID}";
-                webRequest = UnityWebRequest.Get(SteamApiUserAuthUri + parameters);
+                uri = SteamApiUserAuthUri +  $"?key={_webAPIKey}&ticket={ticket}&appid={_appID}";
+                webRequest = UnityWebRequest.Get(uri);
             }
             catch (Exception e)
             {
                 Console.WriteLine(e);
-                ValidateTokenFailed(conn, "Server Exception.");
+                ValidateTokenFailed(conn, "Server Exception");
                 yield break;
             }
 
-            if (!string.IsNullOrEmpty(parameters) || webRequest == null)
+            if (string.IsNullOrEmpty(uri) || webRequest == null)
             {
+                Debug.Log("Error building web request for user authentication. Yielding break.");
+                ValidateTokenFailed(conn, "Server Exception");
                 yield break;
             }
 
@@ -116,7 +121,7 @@ namespace Runtime
             catch (Exception e)
             {
                 Console.WriteLine(e);
-                ValidateTokenFailed(conn, "Server Exception.");
+                ValidateTokenFailed(conn, "Server Exception");
             }
         }
 

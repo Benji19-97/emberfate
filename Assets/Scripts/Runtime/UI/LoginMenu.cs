@@ -3,6 +3,9 @@ using System.Collections.Generic;
 using Mirror;
 using UnityEngine;
 using UnityEngine.UI;
+#if !UNITY_SERVER
+using Steamworks;
+#endif
 
 namespace Runtime.UI
 {
@@ -11,20 +14,15 @@ namespace Runtime.UI
         [SerializeField] private Dropdown serverDropdown;
 
 #if !UNITY_SERVER
-        protected Steamworks.Callback<Steamworks.GetAuthSessionTicketResponse_t> GetAuthSessionTicketResponse;
-        
+        protected Callback<GetAuthSessionTicketResponse_t> GetAuthSessionTicketResponse;
         private byte[] _ticket;
-        private uint _pcbTicket;
-        private Steamworks.HAuthTicket _hAuthTicket;
-
 
         private void Start()
         {
             ServerStatusService.Instance.serverStatusReceived.AddListener(UpdateServerDropdownList);
             serverDropdown.onValueChanged.AddListener(OnSelectServer);
             ServerStatusService.Instance.SendGetRequest();
-            GetAuthSessionTicketResponse = Steamworks.Callback<Steamworks.GetAuthSessionTicketResponse_t>.Create(OnGetAuthSessionTicketResponse);
-
+            GetAuthSessionTicketResponse = Callback<GetAuthSessionTicketResponse_t>.Create(OnGetAuthSessionTicketResponse);
         }
 
         private void UpdateServerDropdownList()
@@ -34,7 +32,6 @@ namespace Runtime.UI
             {
                 list.Add(new Dropdown.OptionData(serverStatus.name));
             }
-
             serverDropdown.options = list;
         }
 
@@ -52,15 +49,13 @@ namespace Runtime.UI
 
         private void GetAuthSessionTicket()
         {
-
             _ticket = new byte[1024];
-            _hAuthTicket = Steamworks.SteamUser.GetAuthSessionTicket(_ticket, 1024, out _pcbTicket);
-
+            Steamworks.SteamUser.GetAuthSessionTicket(_ticket, 1024, out uint pcbTicket);
         }
 
-        private void OnGetAuthSessionTicketResponse(Steamworks.GetAuthSessionTicketResponse_t pCallback)
+        private void OnGetAuthSessionTicketResponse(GetAuthSessionTicketResponse_t pCallback)
         {
-            if (pCallback.m_eResult == Steamworks.EResult.k_EResultOK)
+            if (pCallback.m_eResult == EResult.k_EResultOK)
             {
                 SteamTokenAuthenticator.AuthTicket = GetHexStringFromByteArray(_ticket);
                 NetworkManager.singleton.StartClient();

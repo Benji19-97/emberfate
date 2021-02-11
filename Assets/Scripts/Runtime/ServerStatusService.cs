@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections;
-using System.Linq;
+﻿using System.Collections;
 using Mirror;
 using Newtonsoft.Json;
 using UnityEngine;
@@ -45,7 +43,7 @@ namespace Runtime
                 status = "Ok"
             });
             NetworkManager.singleton.StartServer();
-            Debug.Log("Netowkrmanager: Started server!");
+            Debug.Log("Networkmanager: Started server!");
 #endif
         }
 
@@ -113,9 +111,11 @@ namespace Runtime
 
         private void OnApplicationQuit()
         {
-#if UNITY_SERVER || UNITY_EDITOR
+#if UNITY_SERVER
             NetworkManager.singleton.StopServer();
+            return;
 #endif
+            NetworkManager.singleton.StopClient();
         }
     }
 }
