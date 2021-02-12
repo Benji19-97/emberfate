@@ -3,6 +3,7 @@ using System.Collections;
 using System.IO;
 using Mirror;
 using Newtonsoft.Json.Linq;
+using Telepathy;
 using UnityEngine;
 using UnityEngine.Networking;
 
@@ -24,6 +25,7 @@ namespace Runtime
         {
             public string Ticket;
             public string SteamId;
+            public string PersonaName;
         }
 
         private struct AuthResponseMessage : NetworkMessage
@@ -52,7 +54,8 @@ namespace Runtime
             AuthRequestMessage authRequestMessage = new AuthRequestMessage()
             {
                 Ticket = AuthTicket,
-                SteamId = Steamworks.SteamUser.GetSteamID().m_SteamID.ToString()
+                SteamId = Steamworks.SteamUser.GetSteamID().m_SteamID.ToString(),
+                PersonaName = Steamworks.SteamFriends.GetPersonaName()
             };
             NetworkClient.Send(authRequestMessage);
         }
@@ -67,11 +70,11 @@ namespace Runtime
 
         private void OnAuthRequestMessage(NetworkConnection conn, AuthRequestMessage msg)
         {
-            Console.WriteLine("Received auth request message from steamId " + msg.SteamId);
-            StartCoroutine(__ValidateToken(conn, msg.Ticket, msg.SteamId));
+            ServerLogger.LogMessage("Received auth request. Name: " + msg.PersonaName + " SteamId: " + msg.SteamId, ServerLogger.LogType.Info);
+            StartCoroutine(__ValidateToken(conn, msg.Ticket, msg.SteamId, msg.PersonaName));
         }
 
-        private IEnumerator __ValidateToken(NetworkConnection conn, string ticket, string steamid)
+        private IEnumerator __ValidateToken(NetworkConnection conn, string ticket, string steamid, string steamName)
         {
             string uri;
             UnityWebRequest webRequest;
@@ -93,14 +96,14 @@ namespace Runtime
             }
             catch (Exception e)
             {
-                Console.WriteLine(e);
+                ServerLogger.LogMessage(e.Message, ServerLogger.LogType.Error);
                 ValidateTokenFailed(conn, "Server Exception");
                 yield break;
             }
 
             if (string.IsNullOrEmpty(uri) || webRequest == null)
-            {
-                Console.WriteLine("Error building web request for user authentication. Yielding break.");
+            { 
+                ServerLogger.LogMessage("Error building web request for user authentication. Yielding break.", ServerLogger.LogType.Error);
                 ValidateTokenFailed(conn, "Server Exception");
                 yield break;
             }
@@ -115,12 +118,12 @@ namespace Runtime
                 }
                 else
                 {
-                    HandleTokenValidation(conn, webRequest.downloadHandler.text, steamid);
+                    HandleTokenValidation(conn, webRequest.downloadHandler.text, steamid, steamName);
                 }
             }
             catch (Exception e)
             {
-                Console.WriteLine(e);
+                ServerLogger.LogMessage(e.Message, ServerLogger.LogType.Error);
                 ValidateTokenFailed(conn, "Server Exception");
             }
         }
@@ -142,7 +145,7 @@ namespace Runtime
         }
 
 
-        private void HandleTokenValidation(NetworkConnection conn, string text, string steamId)
+        private void HandleTokenValidation(NetworkConnection conn, string text, string steamId, string steamName)
         {
             try
             {
@@ -156,25 +159,32 @@ namespace Runtime
                     if (authResponse != null && (!authResponse.vacbanned || !authResponse.publisherbanned || authResponse.result != "OK" ||
                                                  authResponse.steamid != steamId))
                     {
-                        ValidateTokenSucceeded(conn, steamId);
+                        ValidateTokenSucceeded(conn, steamId, steamName);
                         return;
                     }
                 }
             }
             catch (Exception e)
             {
-                Console.WriteLine(e);
+                ServerLogger.LogMessage(e.Message, ServerLogger.LogType.Error);
             }
 
             ValidateTokenFailed(conn, "Authentication failed: " + text);
         }
 
-        private void ValidateTokenSucceeded(NetworkConnection conn, string steamId)
+        private void ValidateTokenSucceeded(NetworkConnection conn, string steamId, string steamName)
         {
+            EmberfateNetworkManager.Instance.ConnectionInfos.Add(conn, new ConnectionInfo()
+            {
+                steamId = steamId,
+                playerName = steamName
+            });
+            
             AuthResponseMessage authResponseMessage = new AuthResponseMessage();
             conn.Send(authResponseMessage);
             OnServerAuthenticated.Invoke(conn);
-            //TODO: Add connection to player list with steamId
+            
+
         }
 
         private void ValidateTokenFailed(NetworkConnection conn, string reason)

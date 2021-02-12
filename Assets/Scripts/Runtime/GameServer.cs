@@ -9,10 +9,10 @@ namespace Runtime
 {
     public class GameServer : MonoBehaviour
     {
-#if UNITY_SERVER
 
+#if UNITY_SERVER
         public static GameServer Instance { get; private set; }
-        
+
         private const string ServerConfigPath = "data/config.json";
 
         public ServerConfig Config { get; private set; }
@@ -29,7 +29,7 @@ namespace Runtime
                 Destroy(gameObject);
                 return;
             }
-            
+
             string path = ServerConfigPath;
             StreamReader reader = new StreamReader(path);
             string json = reader.ReadToEnd();
@@ -47,11 +47,15 @@ namespace Runtime
                 location = Config.location,
                 status = Config.status
             });
+        }
+
+        public void StartServer()
+        {
             NetworkManager.singleton.networkAddress = Config.ip;
             NetworkManager.singleton.maxConnections = Config.maxConnections;
             NetworkManager.singleton.GetComponent<KcpTransport>().Port = (ushort) Config.port;
             NetworkManager.singleton.StartServer();
-            Console.WriteLine($"NetworkManager: Started server!\nname: {Config.name}\nip: {Config.ip}:{Config.port} \nmaxConnections: {Config.maxConnections}\nlocation: {Config.location}\n");
+            ServerLogger.LogMessage($"NetworkManager: Started server!\nname: {Config.name}\nip: {Config.ip}:{Config.port} \nmaxConnections: {Config.maxConnections}\nlocation: {Config.location}\n", ServerLogger.LogType.Info);
         }
 #endif
     }

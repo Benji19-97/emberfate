@@ -16,7 +16,6 @@ namespace Runtime.UI
         {
             foreach (Transform child in content.transform)
             {
-                Debug.Log("Delete " + child.gameObject.name);
                 Destroy(child.gameObject);
             }
 

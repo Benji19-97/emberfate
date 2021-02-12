@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using FirstGearGames.FlexSceneManager;
 using FirstGearGames.FlexSceneManager.LoadUnloadDatas;
 using Mirror;
@@ -9,11 +10,27 @@ namespace Runtime
 {
     public class EmberfateNetworkManager : NetworkManager
     {
+        public static EmberfateNetworkManager Instance;
+
+        public override void Awake()
+        {
+            if (Instance == null)
+            {
+                Instance = this;
+                DontDestroyOnLoad(gameObject);
+            }
+            else
+            {
+                Destroy(gameObject);
+            }
+            base.Awake();
+        }
+
+        public Dictionary<NetworkConnection, ConnectionInfo> ConnectionInfos = new Dictionary<NetworkConnection, ConnectionInfo>();
+        
+        [Header("UI")]
         [SerializeField] private GameObject loginMenu;
         [SerializeField] private GameObject characterSelectionMenu;
-        // [Header("Scenes")]
-        // [Scene][SerializeField] private string characterSelectionScene;
-        
         private void OnServerInitialized()
         {
             Console.WriteLine("Server initialized!");
@@ -37,19 +54,18 @@ namespace Runtime
         {
             base.OnServerConnect(conn);
             FlexSceneManager.OnServerConnect(conn);
-            Console.WriteLine(conn + " connected to server.");
+            ServerLogger.LogMessage(ConnectionInfos[conn].playerName + "[" + ConnectionInfos[conn].steamId + "]" + " connected", ServerLogger.LogType.Info);
         }
         
         public override void OnServerDisconnect(NetworkConnection conn)
         {
             FlexSceneManager.OnServerDisconnect(conn);
             base.OnServerDisconnect(conn);
-        }
-
-        public override void OnServerAddPlayer(NetworkConnection conn)
-        {
-            // GameObject player = Instantiate(playerPrefab, Vector3.zero, Quaternion.identity);
-            // NetworkServer.AddPlayerForConnection(conn, player);
+            if (ConnectionInfos.ContainsKey(conn))
+            {
+                ServerLogger.LogMessage(ConnectionInfos[conn].playerName + " disconnected.", ServerLogger.LogType.Info);
+                ConnectionInfos.Remove(conn);
+            }
         }
     }
 }

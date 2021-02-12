@@ -56,11 +56,11 @@ namespace Runtime
             }
         }
 
-#if UNITY_SERVER || UNITY_EDITOR
+#if UNITY_SERVER
         public void SendPostRequest(ServerStatus status)
         {
-            StartCoroutine(PostRequest(status));
-            Console.WriteLine("Sent post request to Server Status API, to register status!");
+            StartCoroutine(PostRequest(status)); 
+            ServerLogger.LogMessage("Trying to register server on Server Status API.", ServerLogger.LogType.Info);
         }
 
         private IEnumerator PostRequest(ServerStatus status)
@@ -85,11 +85,13 @@ namespace Runtime
 
                 if (webRequest.isNetworkError)
                 {
-                    Console.WriteLine("Error while Sending: " + webRequest.error);
+                    ServerLogger.LogMessage("Error while trying to talk to Server Status API: " + webRequest.error, ServerLogger.LogType.Error);
+                    //TODO: Restart to try again?
                 }
                 else
                 {
-                    Console.WriteLine("Success: " + webRequest.downloadHandler.text);
+                    ServerLogger.LogMessage("Success: " + webRequest.downloadHandler.text, ServerLogger.LogType.Success);
+                    GameServer.Instance.StartServer();
                 }
             }
         }

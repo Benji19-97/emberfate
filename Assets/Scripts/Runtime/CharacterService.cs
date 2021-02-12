@@ -71,7 +71,7 @@ namespace Runtime
         private void OnCharacterListRequest(NetworkConnection conn, CharacterListRequest msg)
         {
             //TODO: Fetch characters from database
-            Console.WriteLine(conn + " requested character list. Fetching characters.");
+            ServerLogger.LogMessage(EmberfateNetworkManager.Instance.ConnectionInfos[conn].playerName + "[" + EmberfateNetworkManager.Instance.ConnectionInfos[conn].steamId + "]" + " requested character list. Fetching characters.", ServerLogger.LogType.Info);
             var characterListMock = new CharacterListResponse()
             {
                 CharacterInfos = new CharacterInfo[3]
@@ -97,7 +97,7 @@ namespace Runtime
                 }
             };
 
-            Console.WriteLine("Responding to " + conn);
+            ServerLogger.LogMessage("Sending CharacterListResponse to " + EmberfateNetworkManager.Instance.ConnectionInfos[conn].playerName + "[" + EmberfateNetworkManager.Instance.ConnectionInfos[conn].steamId + "]", ServerLogger.LogType.Success);
             conn.Send(characterListMock);
         }
     }
