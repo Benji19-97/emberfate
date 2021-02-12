@@ -49,7 +49,7 @@ namespace Mirror
         /// </summary>
         [Tooltip("Should the server auto-start when 'Server Build' is checked in build settings")]
         [FormerlySerializedAs("startOnHeadless")]
-        public bool autoStartServerBuild = true;
+        [HideInInspector] public bool autoStartServerBuild = false;
 
         /// <summary>
         /// Enables verbose debug messages in the console
@@ -72,7 +72,7 @@ namespace Mirror
         [Scene]
         [FormerlySerializedAs("m_OfflineScene")]
         [Tooltip("Scene that Mirror will switch to when the client or server is stopped")]
-        public string offlineScene = "";
+        [HideInInspector] public string offlineScene = "";
 
         /// <summary>
         /// The scene to switch to when online.
@@ -81,7 +81,7 @@ namespace Mirror
         [Scene]
         [FormerlySerializedAs("m_OnlineScene")]
         [Tooltip("Scene that Mirror will switch to when the server is started. Clients will recieve a Scene Message to load the server's current scene when they connect.")]
-        public string onlineScene = "";
+        [HideInInspector] public string onlineScene = "";
 
         // transport layer
         [Header("Network Info")]
@@ -140,14 +140,14 @@ namespace Mirror
         /// </summary>
         [FormerlySerializedAs("m_AutoCreatePlayer")]
         [Tooltip("Should Mirror automatically spawn the player after scene change?")]
-        public bool autoCreatePlayer = true;
+        public bool autoCreatePlayer = false;
 
         /// <summary>
         /// The current method of spawning players used by the NetworkManager.
         /// </summary>
         [FormerlySerializedAs("m_PlayerSpawnMethod")]
         [Tooltip("Round Robin or Random order of Start Position selection")]
-        public PlayerSpawnMethod playerSpawnMethod;
+        [HideInInspector] public PlayerSpawnMethod playerSpawnMethod;
 
         /// <summary>
         /// List of prefabs that will be registered with the spawning system.

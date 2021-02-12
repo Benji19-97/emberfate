@@ -67,7 +67,7 @@ namespace Runtime
 
         private void OnAuthRequestMessage(NetworkConnection conn, AuthRequestMessage msg)
         {
-            Debug.Log("Received auth request message from steamId " + msg.SteamId);
+            Console.WriteLine("Received auth request message from steamId " + msg.SteamId);
             StartCoroutine(__ValidateToken(conn, msg.Ticket, msg.SteamId));
         }
 
@@ -100,7 +100,7 @@ namespace Runtime
 
             if (string.IsNullOrEmpty(uri) || webRequest == null)
             {
-                Debug.Log("Error building web request for user authentication. Yielding break.");
+                Console.WriteLine("Error building web request for user authentication. Yielding break.");
                 ValidateTokenFailed(conn, "Server Exception");
                 yield break;
             }
@@ -163,7 +163,7 @@ namespace Runtime
             }
             catch (Exception e)
             {
-                Debug.Log(e);
+                Console.WriteLine(e);
             }
 
             ValidateTokenFailed(conn, "Authentication failed: " + text);
@@ -208,7 +208,7 @@ namespace Runtime
             }
             else
             {
-                Debug.LogError("Authentication failed: " + msg.FailReason);
+                Debug.Log("Authentication failed: " + msg.FailReason);
                 NetworkClient.Disconnect();
             }
         }

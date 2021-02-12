@@ -1,0 +1,81 @@
+2021/01/26
+	- Fixes.
+		+ Fixed single networked scene not loading for late joiners when scene was loaded from server without any active players.
+
+2021/01/15
+	- Improvements.
+		+ Added several warning and error messages to hint when Flex Scene Manager is being used with invalid data. This change was made to help the user debug and provide feedback for bug reporting.
+		+ Added LoadOptions -> Params demo.
+		+ Added Diagram to show event execution order.
+
+2021/01/10
+	- Fixes.
+		+ When a client disconnects OnClientPresenceChange events no longer call for every currently loaded scene on the server. This bug was not causing harm.
+	- Improvements.
+		+ More tooltips improved.
+
+2021/01/09
+	- Fixes.
+		+ NullReferenceException no longer throws when disconnecting a player while also unloading a scene which they reside. While this previously generated an error, no breaks were caused.
+	- Improvements.
+		+ Added FirstGearGames icon to FlexSceneChecker component.
+		+ RemovePlayerObjects within LoadOptions will no longer remove objects which do not have a FlexSceneChecker component.
+		+ Made some tooltips more clear.
+		+ Clients may receive load and unload messages without being authenticated now; this is to support asynchronous authenticators.
+
+2021/01/03
+	- Fixes.
+		+ NullReferenceException no longer sometimes throws when trying to load a NetworkedScene.
+	- Improvements.
+		+ FlexSceneManager script now handles missing NetworkManager exceptions.
+
+2020/12/19
+	- Breaking changes.
+		+ Removed OnClientVisibilityChangeStart/End API. Use OnClientPresenceChangeStart/End instead.
+	- Improvements.
+		+ Added OnClientPresenceChangeStart/End event to FlexSceneManager. Can be used to know when a client is first joining a scene, or being completely removed from a scene.
+	- Fixes.
+		+ When a player would disconnect it wasn't invoking Visibility/Presence change events.
+
+2020/12/03
+	- Improvements.
+		+ Added more parameters within Load and UnloadOptions.
+
+2020/12/01
+	- Fixes.
+		+ Fixed objects disappearing for players when one or more owned objects are removed from a scene, but while they also have other owned objects in the scene.
+
+2020/11/25
+	- Breaking changes.
+		+ Additional parameters for loading and unloading are now set as LoadOptions / UnloadOptions, and can be optionally passed into load and unload methods. This is to declutter method signatures and allow for new options without breaking signatures in future releases.
+	- Fixes.
+		+ Fixed connections being added to scenes before scene load is confirmed on clients during a single scene load.
+		+ Fixed connections not being removed from scenes during a single scene load.
+		+ Fixed connections not being added to scenes when 'Add To Current Scene' is enabled in FlexSceneChecker, while also object has a owner.
+		+ Fixed objects not moving properly between scenes during a single scene load.
+		+ Fixed single scenes not unloading on server when no more players exist in it.
+		+ Fixed players not respawning while using autoCreatePlayer, disconnecting, and reconnecting without stopping play/closing executable.
+		+ Fixed players sometimes being added to the wrong stacked scenes when using shared stacked scenes.
+	- Improvements.
+		+ You can now specify a single connection into Load/UnloadConnectionScenes; you no longer have to make arrays for one connection.
+		+ Shared scene stacking demo is more clear.
+	- New features.
+		+ Connection scenes can now optionally be automatically unloaded on the server when all players exist. This was the default behavior but is now optional should you want to keep the scene running.
+		+ object[] Params introduced into Load/UnloadOptions. This allows you to specify any type of parameters on the server which you can refer back to during event callbacks. Such as including a matchId into your load call so you know which match was loaded upon the OnLoadSceneEnd callback.
+
+2020/11/19
+	- Breaking Changes.
+		+ FlexSceneManager API CHANGES:
+			OnClientSceneChangeStart, OnClientSceneChangeEnd have been removed. In place there is now
+			OnClientVisibilityChangeStart, OnClientVisibilityChangeEnd.
+			These are called on the server, before and after visibility changes are made for the client. See ClientVisibilityChangeEventArgs and the events themselves for more information.
+			Shared Scene stacking example now uses API changes.
+	- Fixes.
+		+ Fixed streamed scenes not unloading on clients when they no longer need the scene.
+		+ Fixed shared scene stacking not unloading properly on clients.
+	- Improvements.
+		+ Work towards making demo scenes more clear. Loading Screen demo is functional but still needs to be cleaned up. Remaining demos have been fixed or adjusted for ease of use.
+
+2020/11/13
+	- Official release!
+		+ v100.

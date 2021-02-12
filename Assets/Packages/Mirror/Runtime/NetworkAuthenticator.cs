@@ -21,13 +21,13 @@ namespace Mirror
         /// Notify subscribers on the server when a client is authenticated
         /// </summary>
         [Tooltip("Mirror has an internal subscriber to this event. You can add your own here.")]
-        public UnityEventNetworkConnection OnServerAuthenticated = new UnityEventNetworkConnection();
+        [HideInInspector] public UnityEventNetworkConnection OnServerAuthenticated = new UnityEventNetworkConnection();
 
         /// <summary>
         /// Notify subscribers on the client when the client is authenticated
         /// </summary>
         [Tooltip("Mirror has an internal subscriber to this event. You can add your own here.")]
-        public UnityEventNetworkConnection OnClientAuthenticated = new UnityEventNetworkConnection();
+        [HideInInspector] public UnityEventNetworkConnection OnClientAuthenticated = new UnityEventNetworkConnection();
 
         #region server
 

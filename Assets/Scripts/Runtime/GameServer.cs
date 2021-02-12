@@ -1,6 +1,5 @@
 ﻿using System;
 using System.IO;
-using System.Runtime.CompilerServices;
 using kcp2k;
 using Mirror;
 using Newtonsoft.Json;
@@ -49,11 +48,11 @@ namespace Runtime
                 status = Config.status
             });
             NetworkManager.singleton.networkAddress = Config.ip;
+            NetworkManager.singleton.maxConnections = Config.maxConnections;
             NetworkManager.singleton.GetComponent<KcpTransport>().Port = (ushort) Config.port;
             NetworkManager.singleton.StartServer();
-            Debug.Log($"NetworkManager: Started server!\nname: {Config.name}\nip: {Config.ip}:{Config.port} \nmaxConnections: {Config.maxConnections}\nlocation: {Config.location}\n");
+            Console.WriteLine($"NetworkManager: Started server!\nname: {Config.name}\nip: {Config.ip}:{Config.port} \nmaxConnections: {Config.maxConnections}\nlocation: {Config.location}\n");
         }
-
 #endif
     }
 }

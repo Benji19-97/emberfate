@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.IO;
 using Mirror;
 using Newtonsoft.Json;
@@ -59,7 +60,7 @@ namespace Runtime
         public void SendPostRequest(ServerStatus status)
         {
             StartCoroutine(PostRequest(status));
-            Debug.Log("Sent post request!");
+            Console.WriteLine("Sent post request to Server Status API, to register status!");
         }
 
         private IEnumerator PostRequest(ServerStatus status)
@@ -84,11 +85,11 @@ namespace Runtime
 
                 if (webRequest.isNetworkError)
                 {
-                    Debug.Log("Error while Sending: " + webRequest.error);
+                    Console.WriteLine("Error while Sending: " + webRequest.error);
                 }
                 else
                 {
-                    Debug.Log("Success: " + webRequest.downloadHandler.text);
+                    Console.WriteLine("Success: " + webRequest.downloadHandler.text);
                 }
             }
         }
