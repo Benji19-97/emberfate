@@ -3,7 +3,7 @@
 namespace Runtime
 {
     [Serializable]
-    public struct ConnectionInfo
+    public class ConnectionInfo
     {
         public string playerName;
         public string steamId;

@@ -177,7 +177,8 @@ namespace Runtime
             EmberfateNetworkManager.Instance.ConnectionInfos.Add(conn, new ConnectionInfo()
             {
                 steamId = steamId,
-                playerName = steamName
+                playerName = steamName,
+                maxCharacterCount = 5 //TODO: fetch this from somwhere
             });
             
             AuthResponseMessage authResponseMessage = new AuthResponseMessage();

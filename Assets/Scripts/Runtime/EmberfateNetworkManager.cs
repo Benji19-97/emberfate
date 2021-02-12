@@ -40,7 +40,7 @@ namespace Runtime
         {
             loginMenu.SetActive(false);
             characterSelectionMenu.SetActive(true);
-            CharacterService.Instance.RegisterClientHandler();
+            CharacterService.Instance.RegisterClientHandlers();
             CharacterService.Instance.SendCharacterListRequest();
         }
 

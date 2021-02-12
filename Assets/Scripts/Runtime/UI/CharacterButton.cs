@@ -11,7 +11,7 @@ namespace Runtime.UI
         private static readonly UnityEvent ResetSelection = new UnityEvent();
 #pragma warning restore 649
 
-        private static string m_selectedCharacter;
+        public static string selectedCharacter { get; private set; }
 
         [SerializeField] private Button selectButton;
         [SerializeField] private Image buttonBackgroundImage;
@@ -42,7 +42,7 @@ namespace Runtime.UI
         private void OnPress()
         {
             ResetSelection.Invoke();
-            m_selectedCharacter = nameText.text;
+            selectedCharacter = nameText.text;
             buttonBackgroundImage.color = selectedColor;
         }
         

@@ -1545,11 +1545,22 @@ MonoBehaviour:
     m_PressedTrigger: Pressed
     m_SelectedTrigger: Selected
     m_DisabledTrigger: Disabled
-  m_Interactable: 0
+  m_Interactable: 1
   m_TargetGraphic: {fileID: 326839597}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 1664204152}
+        m_MethodName: ShowCharacterCreationMenu
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &326839597
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3143,7 +3154,7 @@ GameObject:
   - component: {fileID: 799053157}
   - component: {fileID: 799053156}
   m_Layer: 5
-  m_Name: Dropdown
+  m_Name: Class Dropdown
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -3296,6 +3307,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   characterListChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  characterCreationAnswer:
     m_PersistentCalls:
       m_Calls: []
   characterInfos: []
@@ -3658,11 +3672,22 @@ MonoBehaviour:
     m_PressedTrigger: Pressed
     m_SelectedTrigger: Selected
     m_DisabledTrigger: Disabled
-  m_Interactable: 0
+  m_Interactable: 1
   m_TargetGraphic: {fileID: 1012583992}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 1664204152}
+        m_MethodName: DeleteCharacter
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &1012583992
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3873,7 +3898,7 @@ GameObject:
   - component: {fileID: 1025930260}
   - component: {fileID: 1025930259}
   m_Layer: 5
-  m_Name: InputField
+  m_Name: Name Input Field
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -4266,7 +4291,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 576.0538, y: -424.8517}
+  m_AnchoredPosition: {x: 531.0567, y: -424.8517}
   m_SizeDelta: {x: 233.798, y: 31.621643}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1145219055
@@ -4330,7 +4355,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 637.6531, y: -59.206367}
+  m_AnchoredPosition: {x: 592.656, y: -59.206367}
   m_SizeDelta: {x: 110.599396, y: 18.412739}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1153298245
@@ -4433,6 +4458,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1177267999}
+  - component: {fileID: 1177268000}
   m_Layer: 5
   m_Name: Character Creation Menu
   m_TagString: Untagged
@@ -4460,6 +4486,23 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &1177268000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1177267998}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 13870da6f2f44718a50e5e50abe180ba, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  characterMenu: {fileID: 1664204149}
+  nameInputField: {fileID: 1025930259}
+  classDropdown: {fileID: 799053156}
+  confirmButton: {fileID: 426904352}
+  cancelButton: {fileID: 163000998}
 --- !u!1 &1187648038
 GameObject:
   m_ObjectHideFlags: 0
@@ -5792,6 +5835,7 @@ MonoBehaviour:
   content: {fileID: 881432675}
   characterButtonPrefab: {fileID: 5946280223987563791, guid: 991b90f509c3ebf4fbb8aec562c37cd6,
     type: 3}
+  characterCreationMenu: {fileID: 1177267998}
 --- !u!1 &1687258581
 GameObject:
   m_ObjectHideFlags: 0
@@ -6595,7 +6639,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 576.0537, y: -238.72682}
+  m_AnchoredPosition: {x: 531.05664, y: -238.72682}
   m_SizeDelta: {x: 233.7981, y: 330.62817}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1896460399
