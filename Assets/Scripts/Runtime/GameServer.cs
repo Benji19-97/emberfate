@@ -53,7 +53,7 @@ namespace Runtime
         {
             NetworkManager.singleton.networkAddress = Config.ip;
             NetworkManager.singleton.maxConnections = Config.maxConnections;
-            NetworkManager.singleton.GetComponent<KcpTransport>().Port = (ushort) Config.port;
+            NetworkManager.singleton.GetComponent<TelepathyTransport>().port = (ushort) Config.port;
             NetworkManager.singleton.StartServer();
             ServerLogger.LogMessage($"NetworkManager: Started server!\nname: {Config.name}\nip: {Config.ip}:{Config.port} \nmaxConnections: {Config.maxConnections}\nlocation: {Config.location}\n", ServerLogger.LogType.Info);
         }

@@ -2051,8 +2051,8 @@ GameObject:
   m_Component:
   - component: {fileID: 456835717}
   - component: {fileID: 456835716}
-  - component: {fileID: 456835715}
   - component: {fileID: 456835718}
+  - component: {fileID: 456835715}
   m_Layer: 0
   m_Name: -- Network Manager
   m_TagString: Untagged
@@ -2069,18 +2069,18 @@ MonoBehaviour:
   m_GameObject: {fileID: 456835714}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6b0fecffa3f624585964b0d0eb21b18e, type: 3}
+  m_Script: {fileID: 11500000, guid: 86e6b3cd388498e42b6e4af1f17cc12c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Port: 7777
-  NoDelay: 1
-  Interval: 10
-  FastResend: 2
-  CongestionWindow: 0
-  SendWindowSize: 128
-  ReceiveWindowSize: 128
-  debugLog: 0
-  debugGUI: 0
+  port: 7777
+  updateTime: 15
+  disconnectTimeout: 5000
+  ipv6Enabled: 0
+  maxConnectAttempts: 10
+  serverMaxMessagesPerTick: 10000
+  clientMaxMessagesPerTick: 1000
+  channels: 0304
+  connectKey: MIRROR_LITENETLIB
 --- !u!114 &456835716
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5689,6 +5689,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   mainMenuCanvas: {fileID: 277298857}
+  initializedSteam:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!4 &1487615675
 Transform:
   m_ObjectHideFlags: 0
