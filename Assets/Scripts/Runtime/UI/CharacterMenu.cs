@@ -41,6 +41,14 @@ namespace Runtime.UI
                 CharacterService.Instance.SendCharacterDeletionRequest(CharacterButton.selectedCharacter); //TODO: this needs to be an ID or smth
             }
         }
+
+        public void OnPlay()
+        {
+            if (!string.IsNullOrEmpty(CharacterButton.selectedCharacter))
+            {
+                CharacterService.Instance.SendCharacterPlayRequest(CharacterButton.selectedCharacter); //TODO: this needs to be an ID or smth
+            }
+        }
     
     }
 }

@@ -21,7 +21,7 @@ namespace Runtime.UI
         {
             ServerStatusService.Instance.serverStatusReceived.AddListener(UpdateServerDropdownList);
             serverDropdown.onValueChanged.AddListener(OnSelectServer);
-            ServerStatusService.Instance.SendGetRequest();
+            
             GetAuthSessionTicketResponse = Callback<GetAuthSessionTicketResponse_t>.Create(OnGetAuthSessionTicketResponse);
         }
 

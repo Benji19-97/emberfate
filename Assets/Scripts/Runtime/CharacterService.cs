@@ -1,6 +1,9 @@
 ﻿using System;
 using System.Linq;
+using FirstGearGames.FlexSceneManager;
+using FirstGearGames.FlexSceneManager.LoadUnloadDatas;
 using Mirror;
+using Runtime.UI;
 using UnityEngine;
 using UnityEngine.Events;
 
@@ -45,8 +48,18 @@ namespace Runtime
             public string Message;
         }
 
-        #endregion
+        public struct CharacterPlayRequest : NetworkMessage
+        {
+            public string Name;
+        }
 
+        public struct CharacterPlayResponse : NetworkMessage
+        {
+            public short Code;
+            public string Message;
+        }
+
+        #endregion
 
         public static CharacterService Instance;
 
@@ -58,6 +71,9 @@ namespace Runtime
 
         private const short ResponseCodeOk = 200;
         private const short ResponseCodeError = 401;
+
+        [Header("Scenes")] [Scene] [SerializeField]
+        private string townHubScene;
 
 
         #region Unity Event functions
@@ -90,6 +106,7 @@ namespace Runtime
             NetworkClient.RegisterHandler<CharacterListResponse>(OnCharacterListResponse);
             NetworkClient.RegisterHandler<CharacterCreationResponse>(OnCharacterCreationResponse);
             NetworkClient.RegisterHandler<CharacterDeletionResponse>(OnCharacterDeletionResponse);
+            NetworkClient.RegisterHandler<CharacterPlayResponse>(OnCharacterPlayResponse);
         }
 
         public void RegisterServerHandlers()
@@ -97,19 +114,21 @@ namespace Runtime
             NetworkServer.RegisterHandler<CharacterListRequest>(OnCharacterListRequest);
             NetworkServer.RegisterHandler<CharacterCreationRequest>(OnCharacterCreationRequest);
             NetworkServer.RegisterHandler<CharacterDeletionRequest>(OnCharacterDeletionRequest);
+            NetworkServer.RegisterHandler<CharacterPlayRequest>(OnCharacterPlayRequest);
         }
 
         #region Character List
 
         public void SendCharacterListRequest()
         {
-            Debug.Log("Asking server for character list.");
+            NotificationSystem.Instance.PushNotification("Retrieving characters ...", false);
             NetworkClient.Send(new CharacterListRequest());
         }
 
         private void OnCharacterListResponse(NetworkConnection conn, CharacterListResponse msg)
         {
-            Debug.Log("Retrieved new character list!");
+            //TODO: Fail state
+            NotificationSystem.Instance.PushNotification("Retrieved characters from Game Server.", true);
             characterInfos = msg.CharacterInfos;
             characterListChanged.Invoke();
         }
@@ -155,12 +174,11 @@ namespace Runtime
 
         #endregion
 
-
         #region Character Creation
 
         public void SendCharacterCreationRequest(CharacterInfo characterInfo)
         {
-            Debug.Log("Asking server to create character.");
+            NotificationSystem.Instance.PushNotification("Creating character ...", false);
             NetworkClient.Send(new CharacterCreationRequest()
             {
                 CharacterInfo = characterInfo
@@ -198,7 +216,7 @@ namespace Runtime
                 {
                     Code = ResponseCodeOk,
                     CharacterInfos = connectionInfo.characterInfos,
-                    Message = "Created"
+                    Message = msg.CharacterInfo.name
                 });
                 return;
             }
@@ -214,13 +232,13 @@ namespace Runtime
         {
             if (msg.Code == ResponseCodeOk)
             {
-                Debug.Log("Success." + msg.Message);
+                NotificationSystem.Instance.PushNotification("Successfully created character: " + msg.Message, true);
                 characterInfos = msg.CharacterInfos;
                 characterListChanged.Invoke();
             }
             else
             {
-                Debug.Log("Failed to create character." + msg.Message);
+                NotificationSystem.Instance.PushNotification("Failed to create character: " + msg.Message, true);
             }
 
             characterCreationAnswer.Invoke();
@@ -232,6 +250,7 @@ namespace Runtime
 
         public void SendCharacterDeletionRequest(string characterName)
         {
+            NotificationSystem.Instance.PushNotification("Deleting character ...", false);
             NetworkClient.Send(new CharacterDeletionRequest()
             {
                 Name = characterName
@@ -254,7 +273,7 @@ namespace Runtime
                 {
                     Code = ResponseCodeOk,
                     CharacterInfos = connectionInfo.characterInfos,
-                    Message = "Deleted"
+                    Message = msg.Name
                 });
             }
             catch (Exception e)
@@ -263,7 +282,7 @@ namespace Runtime
                 conn.Send(new CharacterDeletionResponse()
                 {
                     Code = ResponseCodeError,
-                    Message = "Failed to delete character."
+                    Message = "Unknown Error"
                 });
             }
         }
@@ -272,16 +291,63 @@ namespace Runtime
         {
             if (msg.Code == ResponseCodeOk)
             {
-                Debug.Log("Deletion success." + msg.Message);
+                NotificationSystem.Instance.PushNotification("Successfully deleted character: " + msg.Message, true);
+
                 characterInfos = msg.CharacterInfos;
                 characterListChanged.Invoke();
             }
             else
             {
-                Debug.Log("Failed to delete character." + msg.Message);
+                NotificationSystem.Instance.PushNotification("Failed to delete character: " + msg.Message, true);
             }
         }
 
         #endregion
+
+        #region Character Play
+
+        public void SendCharacterPlayRequest(string characterName)
+        {
+            NetworkClient.Send(new CharacterPlayRequest()
+            {
+                Name = characterName
+            });
+        }
+
+        private void OnCharacterPlayRequest(NetworkConnection conn, CharacterPlayRequest msg)
+        {
+            ServerLogger.LogMessage("Player wants to play character " + msg.Name, ServerLogger.LogType.Info);
+            try
+            {
+                var matches = EmberfateNetworkManager.Instance.ConnectionInfos[conn].characterInfos.Where(c => c.name == msg.Name);
+                if (matches.Any())
+                {
+                    var player = LoadPlayerCharacter(conn);
+                    var identity = player.GetComponent<NetworkIdentity>();
+                    FlexSceneManager.LoadConnectionScenes(conn, new SingleSceneData(townHubScene, new NetworkIdentity[] {identity}), null);
+                }
+            }
+            catch (Exception e)
+            {
+                ServerLogger.LogMessage(e.Message, ServerLogger.LogType.Error);
+            }
+        }
+
+        private void OnCharacterPlayResponse(NetworkConnection conn, CharacterPlayResponse msg)
+        {
+        }
+        
+        private GameObject LoadPlayerCharacter(NetworkConnection conn)
+        {
+            var startPos = Vector3.one;
+            var player = Instantiate(EmberfateNetworkManager.Instance.playerPrefab, startPos, Quaternion.identity);
+            NetworkServer.AddPlayerForConnection(conn, player);
+            return player;
+        }
+
+        #endregion
+
+
+
     }
 }

@@ -3,6 +3,7 @@ using System.Collections;
 using System.IO;
 using Mirror;
 using Newtonsoft.Json;
+using Runtime.UI;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.Networking;
@@ -19,7 +20,6 @@ namespace Runtime
 
         [SerializeField] private string uri;
 
-
         private void Awake()
         {
             if (Instance == null)
@@ -33,6 +33,18 @@ namespace Runtime
             }
         }
 
+        private void Start()
+        {
+            #if !UNITY_SERVER
+            SteamInitializer.Instance.initializedSteam.AddListener(OnSteamInitialized);
+            #endif
+        }
+
+        private void OnSteamInitialized()
+        {
+            SendGetRequest();
+        }
+
         public void SendGetRequest()
         {
             StartCoroutine(GetRequest());
@@ -40,16 +52,18 @@ namespace Runtime
 
         private IEnumerator GetRequest()
         {
+            NotificationSystem.Instance.PushNotification("Retrieving server status ...", false);
             using (UnityWebRequest webRequest = UnityWebRequest.Get(uri))
             {
                 yield return webRequest.SendWebRequest();
 
                 if (webRequest.isNetworkError)
                 {
-                    Debug.Log("Error: " + webRequest.error);
+                    NotificationSystem.Instance.PushNotification("Couldn't retrieve server status. Network Error: " + webRequest.error, true);
                 }
                 else
                 {
+                    NotificationSystem.Instance.PushNotification("Retrieved server status from API.", true);
                     serverStatus = JsonConvert.DeserializeObject<ServerStatus[]>(webRequest.downloadHandler.text);
                     serverStatusReceived.Invoke();
                 }

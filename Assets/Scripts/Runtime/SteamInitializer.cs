@@ -1,33 +1,55 @@
-﻿using Mirror;
+﻿using System;
+using Mirror;
+using Runtime.UI;
 using Steamworks;
 using UnityEngine;
+using UnityEngine.Events;
 
 namespace Runtime
 {
     public class SteamInitializer : MonoBehaviour
     {
+        public static SteamInitializer Instance;
+        
         [SerializeField] private GameObject mainMenuCanvas;
+
+        public UnityEvent initializedSteam;
+        
+        private void Awake()
+        {
+            if (Instance == null)
+            {
+                Instance = this;
+            }
+            else
+            {
+                Destroy(gameObject);
+            }
+        }
+
 
         void Start()
         {
 #if UNITY_SERVER
             return;
 #endif
+            NotificationSystem.Instance.PushNotification("Initializing Steam ...", false);
             if (SteamManager.Initialized)
             {
                 string personaName = SteamFriends.GetPersonaName();
 
-                Debug.Log("Welcome " + personaName);
-                mainMenuCanvas.SetActive(true);
+                NotificationSystem.Instance.PushNotification("Successfully initialized Steam. Welcome " + personaName + "!", true);
+                mainMenuCanvas.SetActive(true); //TODO: Game manager that handles things like this with the event below?
+                initializedSteam.Invoke();
             }
             else
             {
 #if UNITY_EDITOR
-                Debug.Log("Please log into Steam!");
-                UnityEditor.EditorApplication.isPlaying = false;
+                NotificationSystem.Instance.PushNotification("Couldn't initialize Steam. Are you sure Steam is open?", true);
+                // UnityEditor.EditorApplication.isPlaying = false;
                 return;
 #endif
-                Application.Quit();
+                // Application.Quit();
             }
         }
     }

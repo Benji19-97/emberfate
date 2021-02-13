@@ -55,6 +55,7 @@ namespace Runtime
             base.OnServerConnect(conn);
             FlexSceneManager.OnServerConnect(conn);
             ServerLogger.LogMessage(ConnectionInfos[conn].playerName + "[" + ConnectionInfos[conn].steamId + "]" + " connected", ServerLogger.LogType.Info);
+            
         }
         
         public override void OnServerDisconnect(NetworkConnection conn)
