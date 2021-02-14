@@ -1,7 +1,7 @@
 ﻿using System;
 using Mirror;
 
-namespace Runtime
+namespace Runtime.Models
 {
     [Serializable]
     public struct CharacterInfo

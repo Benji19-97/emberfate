@@ -6,6 +6,7 @@ using Mirror;
 using Runtime.UI;
 using UnityEngine;
 using UnityEngine.Events;
+using CharacterInfo = Runtime.Models.CharacterInfo;
 
 namespace Runtime
 {
@@ -136,9 +137,9 @@ namespace Runtime
         private void OnCharacterListRequest(NetworkConnection conn, CharacterListRequest msg)
         {
             //TODO: Fetch characters from database
-            ServerLogger.LogMessage(
-                EmberfateNetworkManager.Instance.ConnectionInfos[conn].playerName + "[" + EmberfateNetworkManager.Instance.ConnectionInfos[conn].steamId + "]" +
-                " requested character list. Fetching characters.", ServerLogger.LogType.Info);
+            // ServerLogger.LogMessage(
+            //     EmberfateNetworkManager.Instance.ConnectionInfos[conn].name + "[" + EmberfateNetworkManager.Instance.ConnectionInfos[conn].steamId + "]" +
+            //     " requested character list. Fetching characters.", ServerLogger.LogType.Info);
             var characterListResponse = new CharacterListResponse()
             {
                 CharacterInfos = new CharacterInfo[3]
@@ -165,11 +166,11 @@ namespace Runtime
             };
 
             ServerLogger.LogMessage(
-                "Sending CharacterListResponse to " + EmberfateNetworkManager.Instance.ConnectionInfos[conn].playerName + "[" +
+                "Sending CharacterListResponse to " + EmberfateNetworkManager.Instance.ConnectionInfos[conn].name + "[" +
                 EmberfateNetworkManager.Instance.ConnectionInfos[conn].steamId + "]", ServerLogger.LogType.Success);
             conn.Send(characterListResponse);
 
-            EmberfateNetworkManager.Instance.ConnectionInfos[conn].characterInfos = characterListResponse.CharacterInfos;
+            EmberfateNetworkManager.Instance.ConnectionInfos[conn].characters = characterListResponse.CharacterInfos;
         }
 
         #endregion
@@ -188,11 +189,11 @@ namespace Runtime
         private void OnCharacterCreationRequest(NetworkConnection conn, CharacterCreationRequest msg)
         {
             var connectionInfo = EmberfateNetworkManager.Instance.ConnectionInfos[conn];
-            var newCharacterInfos = connectionInfo.characterInfos.ToList();
+            var newCharacterInfos = connectionInfo.characters.ToList();
 
             string failMessage = "";
 
-            if (connectionInfo.characterInfos.Length >= connectionInfo.maxCharacterCount)
+            if (connectionInfo.characters.Length >= connectionInfo.maxCharacterCount)
             {
                 failMessage = "Reached Character Count Limit";
             }
@@ -210,12 +211,12 @@ namespace Runtime
                 msg.CharacterInfo.level = 1; //TODO: ? is this nice way to do this?
                 newCharacterInfos.Add(msg.CharacterInfo);
 
-                connectionInfo.characterInfos = newCharacterInfos.ToArray();
+                connectionInfo.characters = newCharacterInfos.ToArray();
 
                 conn.Send(new CharacterCreationResponse()
                 {
                     Code = ResponseCodeOk,
-                    CharacterInfos = connectionInfo.characterInfos,
+                    CharacterInfos = connectionInfo.characters,
                     Message = msg.CharacterInfo.name
                 });
                 return;
@@ -260,19 +261,19 @@ namespace Runtime
         private void OnCharacterDeletionRequest(NetworkConnection conn, CharacterDeletionRequest msg)
         {
             var connectionInfo = EmberfateNetworkManager.Instance.ConnectionInfos[conn];
-            var newCharacterInfos = connectionInfo.characterInfos.ToList();
+            var newCharacterInfos = connectionInfo.characters.ToList();
 
             try
             {
                 var character = newCharacterInfos.Find(info => info.name == msg.Name); //TODO: This can be done better or smoother
                 newCharacterInfos.Remove(character);
 
-                connectionInfo.characterInfos = newCharacterInfos.ToArray();
+                connectionInfo.characters = newCharacterInfos.ToArray();
 
                 conn.Send(new CharacterDeletionResponse()
                 {
                     Code = ResponseCodeOk,
-                    CharacterInfos = connectionInfo.characterInfos,
+                    CharacterInfos = connectionInfo.characters,
                     Message = msg.Name
                 });
             }
@@ -319,7 +320,7 @@ namespace Runtime
             ServerLogger.LogMessage("Player wants to play character " + msg.Name, ServerLogger.LogType.Info);
             try
             {
-                var matches = EmberfateNetworkManager.Instance.ConnectionInfos[conn].characterInfos.Where(c => c.name == msg.Name);
+                var matches = EmberfateNetworkManager.Instance.ConnectionInfos[conn].characters.Where(c => c.name == msg.Name);
                 if (matches.Any())
                 {
                     var player = LoadPlayerCharacter(conn);

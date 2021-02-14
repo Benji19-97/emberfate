@@ -4,6 +4,7 @@ using JetBrains.Annotations;
 using kcp2k;
 using Mirror;
 using Newtonsoft.Json;
+using Runtime.Models;
 using UnityEngine;
 
 namespace Runtime

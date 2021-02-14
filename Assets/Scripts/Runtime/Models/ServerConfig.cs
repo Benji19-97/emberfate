@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Runtime
+namespace Runtime.Models
 {
     [Serializable]
     public class ServerConfig

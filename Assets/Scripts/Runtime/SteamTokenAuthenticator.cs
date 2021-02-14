@@ -2,7 +2,9 @@
 using System.Collections;
 using System.IO;
 using Mirror;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Runtime.Models;
 using Telepathy;
 using UnityEngine;
 using UnityEngine.Networking;
@@ -20,6 +22,7 @@ namespace Runtime
         private const string WebApiKeyPath = "data/web_api_key.txt";
         private const string SteamAppIdPath = "data/steam_appid.txt";
         private const string SteamApiUserAuthUri = "https://partner.steam-api.com/ISteamUserAuth/AuthenticateUserTicket/v1/";
+        private const string GetPlayerDataUri = "http://localhost:3000/api/players/";
 
         private struct AuthRequestMessage : NetworkMessage
         {
@@ -174,18 +177,57 @@ namespace Runtime
 
         private void ValidateTokenSucceeded(NetworkConnection conn, string steamId, string steamName)
         {
-            EmberfateNetworkManager.Instance.ConnectionInfos.Add(conn, new ConnectionInfo()
-            {
-                steamId = steamId,
-                playerName = steamName,
-                maxCharacterCount = 5 //TODO: fetch this from somwhere
-            });
-            
-            AuthResponseMessage authResponseMessage = new AuthResponseMessage();
-            conn.Send(authResponseMessage);
-            OnServerAuthenticated.Invoke(conn);
-            
+            StartCoroutine(GetPlayerDataAndAuthenticate(conn, steamId, steamName));
+        }
 
+        private IEnumerator GetPlayerDataAndAuthenticate(NetworkConnection conn, string steamId, string steamName, bool recursiveCall = false)
+        {
+            ServerLogger.LogMessage("Fetching player data for " + steamId, ServerLogger.LogType.Info);
+            using (UnityWebRequest webRequest = UnityWebRequest.Get(GetPlayerDataUri + steamId + "/" + ServerAuthenticator.Instance.authToken))
+            {
+                yield return webRequest.SendWebRequest();
+
+                if (webRequest.isNetworkError || webRequest.responseCode != 200)
+                {
+                    //if error and unauthorized
+                    if (!recursiveCall)
+                    {
+                        //get new token
+                        yield return StartCoroutine(ServerAuthenticator.Instance.GetAuthTokenRequest());
+
+                        //if token is null, the request failed
+                        if (ServerAuthenticator.Instance.authToken == null)
+                        {
+                            ServerLogger.LogMessage("Error, auth token was null right after requesting.", ServerLogger.LogType.Error);
+                            ServerLogger.LogMessage("Aborting GetPlayerData call!", ServerLogger.LogType.Error);
+                            ValidateTokenFailed(conn, "Failed fetching player data from database.");
+                        }
+                        else //if token is not null, we can try again
+                        {
+                            StartCoroutine(GetPlayerDataAndAuthenticate(conn, steamId, steamName, true));
+                        }
+                    }
+                    else
+                    {
+                        ServerLogger.LogMessage("Error while trying to get player data: " + webRequest.error + webRequest.downloadHandler.text,
+                            ServerLogger.LogType.Error);
+                        ServerLogger.LogMessage("Aborting GetPlayerData call!", ServerLogger.LogType.Error);
+                        ValidateTokenFailed(conn, "Failed fetching player data from database.");
+                    }
+
+                }
+                else
+                {
+                    ServerLogger.LogMessage("Successfully fetched player data for " + steamId, ServerLogger.LogType.Success);
+                    ServerLogger.LogMessage("Data:" + webRequest.downloadHandler.text, ServerLogger.LogType.Success);
+                    var playerData = JsonConvert.DeserializeObject<PlayerData>(webRequest.downloadHandler.text);
+                    playerData.name = steamName;
+                    EmberfateNetworkManager.Instance.ConnectionInfos.Add(conn, playerData);
+                    AuthResponseMessage authResponseMessage = new AuthResponseMessage();
+                    conn.Send(authResponseMessage);
+                    OnServerAuthenticated.Invoke(conn);
+                }
+            }
         }
 
         private void ValidateTokenFailed(NetworkConnection conn, string reason)

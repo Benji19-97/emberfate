@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using FirstGearGames.FlexSceneManager;
 using FirstGearGames.FlexSceneManager.LoadUnloadDatas;
 using Mirror;
+using Runtime.Models;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -27,7 +28,7 @@ namespace Runtime
             base.Awake();
         }
 
-        public Dictionary<NetworkConnection, ConnectionInfo> ConnectionInfos = new Dictionary<NetworkConnection, ConnectionInfo>();
+        public Dictionary<NetworkConnection, PlayerData> ConnectionInfos = new Dictionary<NetworkConnection, PlayerData>();
 
         [Header("UI")] [SerializeField] private GameObject loginMenu;
         [SerializeField] private GameObject characterSelectionMenu;
@@ -55,7 +56,7 @@ namespace Runtime
         {
             base.OnServerConnect(conn);
             FlexSceneManager.OnServerConnect(conn);
-            ServerLogger.LogMessage(ConnectionInfos[conn].playerName + "[" + ConnectionInfos[conn].steamId + "]" + " connected", ServerLogger.LogType.Info);
+            ServerLogger.LogMessage(ConnectionInfos[conn].name + "[" + ConnectionInfos[conn].steamId + "]" + " connected", ServerLogger.LogType.Info);
         }
 
         public override void OnServerDisconnect(NetworkConnection conn)
@@ -64,7 +65,7 @@ namespace Runtime
             base.OnServerDisconnect(conn);
             if (ConnectionInfos.ContainsKey(conn))
             {
-                ServerLogger.LogMessage(ConnectionInfos[conn].playerName + " disconnected.", ServerLogger.LogType.Info);
+                ServerLogger.LogMessage(ConnectionInfos[conn].name + " disconnected.", ServerLogger.LogType.Info);
                 ConnectionInfos.Remove(conn);
             }
         }

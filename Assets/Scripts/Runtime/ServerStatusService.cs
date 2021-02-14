@@ -3,6 +3,7 @@ using System.Collections;
 using System.IO;
 using Mirror;
 using Newtonsoft.Json;
+using Runtime.Models;
 using Runtime.UI;
 using UnityEngine;
 using UnityEngine.Events;

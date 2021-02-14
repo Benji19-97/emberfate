@@ -2,6 +2,7 @@
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.UI;
+using CharacterInfo = Runtime.Models.CharacterInfo;
 
 namespace Runtime.UI
 {
