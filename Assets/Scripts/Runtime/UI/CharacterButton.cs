@@ -36,8 +36,8 @@ namespace Runtime.UI
 
         public void SetCharacter(CharacterInfo info)
         {
-            nameText.text = info.name;
-            infoText.text = "Level " + info.level + " " + info.@class;
+            nameText.text = info.characterName;
+            // infoText.text = "Level " + info.level + " " + info.@class;
         }
 
         private void OnPress()

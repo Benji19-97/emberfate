@@ -25,8 +25,8 @@ namespace Runtime.UI
         {
             CharacterService.Instance.SendCharacterCreationRequest(new CharacterInfo()
             {
-                name = nameInputField.text,
-                @class = classDropdown.options[classDropdown.value].text
+                characterName = nameInputField.text,
+                // @class = classDropdown.options[classDropdown.value].text
             });
             
             nameInputField.interactable = false;

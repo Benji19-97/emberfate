@@ -28,7 +28,6 @@ namespace Runtime
             base.Awake();
         }
 
-        public Dictionary<NetworkConnection, PlayerData> ConnectionInfos = new Dictionary<NetworkConnection, PlayerData>();
 
         [Header("UI")] [SerializeField] private GameObject loginMenu;
         [SerializeField] private GameObject characterSelectionMenu;
@@ -46,8 +45,9 @@ namespace Runtime
             CharacterService.Instance.SendCharacterListRequest();
         }
 
-        public override void OnClientDisconnect(NetworkConnection conn)
+        public void Disconnect()
         {
+            StopClient();
             loginMenu.SetActive(true);
             characterSelectionMenu.SetActive(false);
         }
@@ -56,23 +56,23 @@ namespace Runtime
         {
             base.OnServerConnect(conn);
             FlexSceneManager.OnServerConnect(conn);
-            ServerLogger.LogMessage(ConnectionInfos[conn].name + "[" + ConnectionInfos[conn].steamId + "]" + " connected", ServerLogger.LogType.Info);
+            ServerLogger.LogMessage(PlayerDataService.Instance.ConnectionInfos[conn].name + " [" + PlayerDataService.Instance.ConnectionInfos[conn].steamId + "]" + " connected", ServerLogger.LogType.Info);
         }
 
         public override void OnServerDisconnect(NetworkConnection conn)
         {
             FlexSceneManager.OnServerDisconnect(conn);
             base.OnServerDisconnect(conn);
-            if (ConnectionInfos.ContainsKey(conn))
+            if (PlayerDataService.Instance.ConnectionInfos.ContainsKey(conn))
             {
-                ServerLogger.LogMessage(ConnectionInfos[conn].name + " disconnected.", ServerLogger.LogType.Info);
-                ConnectionInfos.Remove(conn);
+                StartCoroutine(PlayerDataService.Instance.PushPlayerData(conn, true));
+                ServerLogger.LogMessage(PlayerDataService.Instance.ConnectionInfos[conn].name + " disconnected.", ServerLogger.LogType.Info);
             }
         }
 
         public override void OnStopServer()
         {
-            ServerLogger.LogMessage("Stopping server...",ServerLogger.LogType.Info);
+            ServerLogger.LogMessage("Stopping server...", ServerLogger.LogType.Info);
 #if UNITY_SERVER
             GameServer.Instance.OnStopServer();
 #endif

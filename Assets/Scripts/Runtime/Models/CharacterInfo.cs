@@ -4,30 +4,28 @@ using Mirror;
 namespace Runtime.Models
 {
     [Serializable]
-    public struct CharacterInfo
+    public class CharacterInfo
     {
-        public string name;
-        public string @class;
-        public byte level;
+        public string characterName;
+        public string characterId;
     }
     
     public static class CharacterInfoReaderWriter
     {
         public static void WriteCharacterInfo(this NetworkWriter writer, CharacterInfo info)
         {
-            writer.WriteString(info.name);
-            writer.WriteString(info.@class);
-            writer.WriteByte(info.level);
+            writer.WriteString(info.characterName);
+            writer.WriteString(info.characterId);
+
         }
 
         public static CharacterInfo ReadCharacterInfo(this NetworkReader reader)
         {
-            CharacterInfo characterInfo = default;
-            characterInfo.name = reader.ReadString();
-            characterInfo.@class = reader.ReadString();
-            characterInfo.level = reader.ReadByte();
-
-            return characterInfo;
+            return new CharacterInfo()
+            {
+                characterName = reader.ReadString(),
+                characterId = reader.ReadString()
+            };
         }
     }
 }

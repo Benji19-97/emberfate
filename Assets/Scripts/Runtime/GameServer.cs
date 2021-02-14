@@ -15,7 +15,7 @@ namespace Runtime
 
 #if UNITY_EDITOR
         // ReSharper disable once InconsistentNaming
-        public static bool START_SERVER_IN_UNITY_EDITOR = true;
+        public static bool START_SERVER_IN_UNITY_EDITOR = false;
 #endif
 
         public static GameServer Instance { get; private set; }

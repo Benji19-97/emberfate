@@ -222,7 +222,7 @@ namespace Runtime
                     ServerLogger.LogMessage("Data:" + webRequest.downloadHandler.text, ServerLogger.LogType.Success);
                     var playerData = JsonConvert.DeserializeObject<PlayerData>(webRequest.downloadHandler.text);
                     playerData.name = steamName;
-                    EmberfateNetworkManager.Instance.ConnectionInfos.Add(conn, playerData);
+                    PlayerDataService.Instance.ConnectionInfos.Add(conn, playerData);
                     AuthResponseMessage authResponseMessage = new AuthResponseMessage();
                     conn.Send(authResponseMessage);
                     OnServerAuthenticated.Invoke(conn);
