@@ -79,7 +79,9 @@ namespace Telepathy
                 listener.Server.NoDelay = NoDelay;
                 listener.Server.SendTimeout = SendTimeout;
                 listener.Start();
+#if UNITY_EDITOR
                 Logger.Log("Server: listening port=" + port);
+#endif
 
                 // keep accepting new clients
                 while (true)
@@ -192,7 +194,9 @@ namespace Telepathy
             // start the listener thread
             // (on low priority. if main thread is too busy then there is not
             //  much value in accepting even more clients)
+#if UNITY_EDITOR
             Logger.Log("Server: Start port=" + port);
+#endif
             listenerThread = new Thread(() => { Listen(port); });
             listenerThread.IsBackground = true;
             listenerThread.Priority = ThreadPriority.BelowNormal;
@@ -205,9 +209,9 @@ namespace Telepathy
             // only if started
             if (!Active)
                 return;
-
+#if UNITY_EDITOR
             Logger.Log("Server: stopping...");
-
+#endif
             // stop listening to connections so that no one can connect while we
             // close the client connections
             // (might be null if we call Stop so quickly after Start that the
@@ -226,7 +230,14 @@ namespace Telepathy
                 TcpClient client = kvp.Value.client;
                 // close the stream if not closed yet. it may have been closed
                 // by a disconnect already, so use try/catch
-                try { client.GetStream().Close(); } catch { }
+                try
+                {
+                    client.GetStream().Close();
+                }
+                catch
+                {
+                }
+
                 client.Close();
             }
 
@@ -256,6 +267,7 @@ namespace Telepathy
                     token.sendPending.Set();
                     return true;
                 }
+
                 // sending to an invalid connectionId is expected sometimes.
                 // for example, if a client disconnects, the server might still
                 // try to send for one frame before it calls GetNextMessages
@@ -264,6 +276,7 @@ namespace Telepathy
                 //Logger.Log("Server.Send: invalid connectionId: " + connectionId);
                 return false;
             }
+
             Logger.LogError("Client.Send: message too big: " + data.Length + ". Limit: " + MaxMessageSize);
             return false;
         }
@@ -275,8 +288,9 @@ namespace Telepathy
             ClientToken token;
             if (clients.TryGetValue(connectionId, out token))
             {
-                return ((IPEndPoint)token.client.Client.RemoteEndPoint).Address.ToString();
+                return ((IPEndPoint) token.client.Client.RemoteEndPoint).Address.ToString();
             }
+
             return "";
         }
 
@@ -292,6 +306,7 @@ namespace Telepathy
                 Logger.Log("Server.Disconnect connectionId:" + connectionId);
                 return true;
             }
+
             return false;
         }
     }

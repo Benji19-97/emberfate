@@ -686,14 +686,14 @@ namespace Mirror
             if (NetworkClient.isConnected)
             {
                 StopClient();
-                print("OnApplicationQuit: stopped client");
+                print("OnApplicationQuit: Stopped client!");
             }
 
             // stop server after stopping client (for proper host mode stopping)
             if (NetworkServer.active)
             {
                 StopServer();
-                print("OnApplicationQuit: stopped server");
+                print("OnApplicationQuit: Stopped server!");
             }
         }
 

@@ -10,6 +10,7 @@
 #endif
 
 using UnityEngine;
+using GameServer = Runtime.GameServer;
 #if !DISABLESTEAMWORKS
 using System.Collections;
 using Steamworks;
@@ -62,8 +63,13 @@ public class SteamManager : MonoBehaviour
 #if UNITY_SERVER
 			return;
 #endif
-
-
+#if UNITY_EDITOR
+        if (GameServer.START_SERVER_IN_UNITY_EDITOR)
+        {
+            Destroy(gameObject);
+            return;
+        }
+#endif
         // Only one instance of SteamManager at a time!
         if (s_instance != null)
         {
@@ -147,7 +153,6 @@ public class SteamManager : MonoBehaviour
 #if UNITY_SERVER
 		return;
 #endif
-
         if (s_instance == null)
         {
             s_instance = this;
@@ -172,7 +177,7 @@ public class SteamManager : MonoBehaviour
     // Thus it is not recommended to perform any Steamworks work in other OnDestroy functions as the order of execution can not be garenteed upon Shutdown. Prefer OnDisable().
     protected virtual void OnDestroy()
     {
-        #if !UNITY_SERVER
+#if !UNITY_SERVER
         if (s_instance != this)
         {
             return;
@@ -186,7 +191,7 @@ public class SteamManager : MonoBehaviour
         }
 
         SteamAPI.Shutdown();
-        #endif
+#endif
     }
 
     protected virtual void Update()

@@ -18,7 +18,8 @@ namespace Runtime
 
         [HideInInspector] public UnityEvent serverStatusReceived;
 
-        [SerializeField] private string uri;
+        private const string GetServerStatusUri = "http://localhost:3001/api/serverstatus";
+        private const string PostServerStatusUri = "http://localhost:3000/api/serverstatus/update/";
 
         private void Awake()
         {
@@ -35,9 +36,16 @@ namespace Runtime
 
         private void Start()
         {
-            #if !UNITY_SERVER
+#if UNITY_SERVER
+            return;
+#endif
+#if UNITY_EDITOR
+            if (GameServer.START_SERVER_IN_UNITY_EDITOR)
+            {
+                return;
+            }
+#endif
             SteamInitializer.Instance.initializedSteam.AddListener(OnSteamInitialized);
-            #endif
         }
 
         private void OnSteamInitialized()
@@ -53,7 +61,7 @@ namespace Runtime
         private IEnumerator GetRequest()
         {
             NotificationSystem.Instance.PushNotification("Retrieving server status ...", false);
-            using (UnityWebRequest webRequest = UnityWebRequest.Get(uri))
+            using (UnityWebRequest webRequest = UnityWebRequest.Get(GetServerStatusUri))
             {
                 yield return webRequest.SendWebRequest();
 
@@ -70,25 +78,18 @@ namespace Runtime
             }
         }
 
-#if UNITY_SERVER
-        public void SendPostRequest(ServerStatus status)
+#if UNITY_SERVER || UNITY_EDITOR
+        public void SendServerStatusPostRequest(ServerStatus status)
         {
-            StartCoroutine(PostRequest(status)); 
-            ServerLogger.LogMessage("Trying to register server on Server Status API.", ServerLogger.LogType.Info);
+            StartCoroutine(PostServerStatus(status));
         }
 
-        private IEnumerator PostRequest(ServerStatus status)
+        private IEnumerator PostServerStatus(ServerStatus status, bool recursiveCall = false)
         {
-            var key = FetchServerKey();
-            var postData = new
-            {
-                data = status,
-                key
-            };
+            ServerLogger.LogMessage("Updating server status on API...", ServerLogger.LogType.Info);
+            var postDataJson = JsonConvert.SerializeObject(status);
 
-            var postDataJson = JsonConvert.SerializeObject(postData);
-
-            using (UnityWebRequest webRequest = new UnityWebRequest(uri, "POST"))
+            using (UnityWebRequest webRequest = new UnityWebRequest(PostServerStatusUri + ServerAuthenticator.Instance.authToken, "POST"))
             {
                 byte[] jsonToSend = new System.Text.UTF8Encoding().GetBytes(postDataJson);
                 webRequest.uploadHandler = new UploadHandlerRaw(jsonToSend);
@@ -97,27 +98,41 @@ namespace Runtime
 
                 yield return webRequest.SendWebRequest();
 
-                if (webRequest.isNetworkError)
+                if (webRequest.isNetworkError || webRequest.responseCode != 200)
                 {
-                    ServerLogger.LogMessage("Error while trying to talk to Server Status API: " + webRequest.error, ServerLogger.LogType.Error);
-                    //TODO: Restart to try again?
+                    //if error and unauthorized
+                    if (!recursiveCall)
+                    {
+                        //get new token
+                        yield return StartCoroutine(ServerAuthenticator.Instance.GetAuthTokenRequest());
+
+                        //if token is null, the token request failed
+                        if (ServerAuthenticator.Instance.authToken == null)
+                        {
+                            ServerLogger.LogMessage("Error, auth token was null right after requesting.", ServerLogger.LogType.Error);
+                            ServerLogger.LogMessage("Aborting PostServerStatus call!", ServerLogger.LogType.Error);
+                        }
+                        else //if token is not null, we can try again to post status
+                        {
+                            ServerLogger.LogMessage("Trying again to update server status on API.", ServerLogger.LogType.Info);
+                            StartCoroutine(PostServerStatus(status, true));
+                        }
+                    }
+                    else
+                    {
+                        ServerLogger.LogMessage("Error while trying to post server status: " + webRequest.error + webRequest.downloadHandler.text,
+                            ServerLogger.LogType.Error);
+                        ServerLogger.LogMessage("Aborting PostServerStatus call!", ServerLogger.LogType.Error);
+                    }
                 }
                 else
                 {
-                    ServerLogger.LogMessage("Success: " + webRequest.downloadHandler.text, ServerLogger.LogType.Success);
+                    ServerLogger.LogMessage("Successfully updated server status on API.", ServerLogger.LogType.Success);
                     GameServer.Instance.StartServer();
                 }
             }
         }
 
-        private string FetchServerKey()
-        {
-            string path = "data/server_key.txt";
-            StreamReader reader = new StreamReader(path);
-            var key = reader.ReadToEnd();
-            reader.Close();
-            return key;
-        }
 #endif
 
         private void OnApplicationQuit()
@@ -125,6 +140,13 @@ namespace Runtime
 #if UNITY_SERVER
             NetworkManager.singleton.StopServer();
             return;
+#endif
+#if UNITY_EDITOR
+            if (GameServer.START_SERVER_IN_UNITY_EDITOR)
+            {
+                NetworkManager.singleton.StopServer();
+                return;
+            }
 #endif
             NetworkManager.singleton.StopClient();
         }

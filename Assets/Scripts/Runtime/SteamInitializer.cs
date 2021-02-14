@@ -10,13 +10,25 @@ namespace Runtime
     public class SteamInitializer : MonoBehaviour
     {
         public static SteamInitializer Instance;
-        
+
         [SerializeField] private GameObject mainMenuCanvas;
 
         public UnityEvent initializedSteam;
-        
+
         private void Awake()
         {
+#if UNITY_SERVER
+            Destroy(gameObject);
+#endif
+
+#if UNITY_EDITOR
+            if (GameServer.START_SERVER_IN_UNITY_EDITOR)
+            {
+                Destroy(gameObject);
+                return;
+            }
+#endif
+
             if (Instance == null)
             {
                 Instance = this;

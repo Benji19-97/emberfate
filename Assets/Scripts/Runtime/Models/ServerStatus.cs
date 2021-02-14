@@ -10,5 +10,6 @@ namespace Runtime
         public int maxConnections;
         public string location;
         public string ip;
+        public int port;
     }
 }

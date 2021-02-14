@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using JetBrains.Annotations;
 using kcp2k;
 using Mirror;
 using Newtonsoft.Json;
@@ -9,8 +10,13 @@ namespace Runtime
 {
     public class GameServer : MonoBehaviour
     {
+#if UNITY_SERVER || UNITY_EDITOR
 
-#if UNITY_SERVER
+#if UNITY_EDITOR
+        // ReSharper disable once InconsistentNaming
+        public static bool START_SERVER_IN_UNITY_EDITOR = true;
+#endif
+
         public static GameServer Instance { get; private set; }
 
         private const string ServerConfigPath = "data/config.json";
@@ -19,6 +25,13 @@ namespace Runtime
 
         private void Awake()
         {
+#if UNITY_EDITOR
+            if (!START_SERVER_IN_UNITY_EDITOR)
+            {
+                Destroy(gameObject);
+            }
+#endif
+
             if (Instance == null)
             {
                 Instance = this;
@@ -39,13 +52,14 @@ namespace Runtime
 
         private void Start()
         {
-            ServerStatusService.Instance.SendPostRequest(new ServerStatus()
+            ServerStatusService.Instance.SendServerStatusPostRequest(new ServerStatus()
             {
                 name = Config.name,
                 ip = Config.ip,
                 maxConnections = Config.maxConnections,
                 location = Config.location,
-                status = Config.status
+                status = "online",
+                port = Config.port
             });
         }
 
@@ -55,7 +69,19 @@ namespace Runtime
             NetworkManager.singleton.maxConnections = Config.maxConnections;
             NetworkManager.singleton.GetComponent<TelepathyTransport>().port = (ushort) Config.port;
             NetworkManager.singleton.StartServer();
-            ServerLogger.LogMessage($"NetworkManager: Started server!\nname: {Config.name}\nip: {Config.ip}:{Config.port} \nmaxConnections: {Config.maxConnections}\nlocation: {Config.location}\n", ServerLogger.LogType.Info);
+        }
+
+        public void OnStopServer()
+        {
+            ServerStatusService.Instance.SendServerStatusPostRequest(new ServerStatus()
+            {
+                name = Config.name,
+                ip = Config.ip,
+                maxConnections = Config.maxConnections,
+                location = Config.location,
+                status = "offline",
+                port = Config.port
+            });
         }
 #endif
     }
