@@ -58,6 +58,8 @@ namespace Runtime.UI
             if (pCallback.m_eResult == EResult.k_EResultOK)
             {
                 SteamTokenAuthenticator.AuthTicket = GetHexStringFromByteArray(_ticket);
+                // Debug.Log("SteamId: " + SteamUser.GetSteamID().m_SteamID);
+                // Debug.Log("AuthTicket: " + SteamTokenAuthenticator.AuthTicket);
                 NetworkManager.singleton.StartClient();
             }
         }

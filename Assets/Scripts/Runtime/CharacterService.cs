@@ -1,11 +1,16 @@
 ﻿using System;
+using System.Collections;
 using System.Linq;
 using FirstGearGames.FlexSceneManager;
 using FirstGearGames.FlexSceneManager.LoadUnloadDatas;
 using Mirror;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using Runtime.Models;
 using Runtime.UI;
 using UnityEngine;
 using UnityEngine.Events;
+using UnityEngine.Networking;
 using CharacterInfo = Runtime.Models.CharacterInfo;
 
 namespace Runtime
@@ -27,12 +32,12 @@ namespace Runtime
 
         public struct CharacterCreationRequest : NetworkMessage
         {
-            public CharacterInfo CharacterInfo;
+            public string Name;
+            public string @Class;
         }
 
         public struct CharacterCreationResponse : NetworkMessage
         {
-            public CharacterInfo[] CharacterInfos;
             public short Code;
             public string Message;
         }
@@ -68,10 +73,13 @@ namespace Runtime
         public UnityEvent characterCreationAnswer;
 
 
-        public CharacterInfo[] characterInfos;
+        public Character[] characters;
 
         private const short ResponseCodeOk = 200;
         private const short ResponseCodeError = 401;
+
+        private const string GetCharacterUri = "http://localhost:3003/api/characters/";
+        private const string CreateCharacterUri = "http://localhost:3000/api/characters/create/";
 
         [Header("Scenes")] [Scene] [SerializeField]
         private string townHubScene;
@@ -104,7 +112,7 @@ namespace Runtime
 
         public void RegisterClientHandlers()
         {
-            NetworkClient.RegisterHandler<CharacterListResponse>(OnCharacterListResponse);
+            // NetworkClient.RegisterHandler<CharacterListResponse>(OnCharacterListResponse);
             NetworkClient.RegisterHandler<CharacterCreationResponse>(OnCharacterCreationResponse);
             NetworkClient.RegisterHandler<CharacterDeletionResponse>(OnCharacterDeletionResponse);
             NetworkClient.RegisterHandler<CharacterPlayResponse>(OnCharacterPlayResponse);
@@ -112,7 +120,7 @@ namespace Runtime
 
         public void RegisterServerHandlers()
         {
-            NetworkServer.RegisterHandler<CharacterListRequest>(OnCharacterListRequest);
+            // NetworkServer.RegisterHandler<CharacterListRequest>(OnCharacterListRequest);
             NetworkServer.RegisterHandler<CharacterCreationRequest>(OnCharacterCreationRequest);
             NetworkServer.RegisterHandler<CharacterDeletionRequest>(OnCharacterDeletionRequest);
             NetworkServer.RegisterHandler<CharacterPlayRequest>(OnCharacterPlayRequest);
@@ -120,69 +128,60 @@ namespace Runtime
 
         #region Character List
 
-        public void SendCharacterListRequest()
+        public void GetCharactersFromDatabase()
+        {
+            StartCoroutine(FetchCharacters());
+        }
+
+        private IEnumerator FetchCharacters()
         {
             NotificationSystem.Instance.PushNotification("Retrieving characters ...", false);
-            NetworkClient.Send(new CharacterListRequest());
-        }
 
-        private void OnCharacterListResponse(NetworkConnection conn, CharacterListResponse msg)
-        {
-            //TODO: Fail state
-            NotificationSystem.Instance.PushNotification("Retrieved characters from Game Server.", true);
-            characterInfos = msg.CharacterInfos;
-            characterListChanged.Invoke();
-        }
-
-        private void OnCharacterListRequest(NetworkConnection conn, CharacterListRequest msg)
-        {
-            //TODO: Fetch characters from database
-            // ServerLogger.LogMessage(
-            //     EmberfateNetworkManager.Instance.ConnectionInfos[conn].name + "[" + EmberfateNetworkManager.Instance.ConnectionInfos[conn].steamId + "]" +
-            //     " requested character list. Fetching characters.", ServerLogger.LogType.Info);
-            var characterListResponse = new CharacterListResponse()
+            using (UnityWebRequest webRequest = UnityWebRequest.Get(GetCharacterUri + Steamworks.SteamUser.GetSteamID().m_SteamID + "/all/?token=" + SteamTokenAuthenticator.AuthTicket))
             {
-                CharacterInfos = new CharacterInfo[3]
+                yield return webRequest.SendWebRequest();
+
+                if (webRequest.isNetworkError || webRequest.responseCode != 200)
                 {
-                    new CharacterInfo()
-                    {
-                        characterName = "Tyrael"
-                    },
-                    new CharacterInfo()
-                    {
-                        characterName = "Doedre"
-                    },
-                    new CharacterInfo()
-                    {
-                        characterName = "Valla"
-                    }
+                    NotificationSystem.Instance.PushNotification("Couldn't retrieve character list. Network Error: " + webRequest.error, true);
                 }
-            };
+                else
+                {
+                    NotificationSystem.Instance.PushNotification("Retrieved characters from Game Server.", true);
 
-            ServerLogger.LogMessage(
-                "Sending CharacterListResponse to " + PlayerDataService.Instance.ConnectionInfos[conn].name + "[" +
-                PlayerDataService.Instance.ConnectionInfos[conn].steamId + "]", ServerLogger.LogType.Success);
-            conn.Send(characterListResponse);
+                    var jArray = JArray.Parse(webRequest.downloadHandler.text);
 
-            PlayerDataService.Instance.ConnectionInfos[conn].characters = characterListResponse.CharacterInfos;
+                    var newCharacters = new Character[jArray.Count];
+
+                    for (int i = 0; i < jArray.Count; i++)
+                    {
+                        newCharacters[i] = Character.Deserialize(jArray[i].ToString());
+                    }
+
+                    characters = newCharacters;
+
+                    characterListChanged.Invoke();
+                }
+            }
         }
 
         #endregion
 
         #region Character Creation
 
-        public void SendCharacterCreationRequest(CharacterInfo characterInfo)
+        public void SendCharacterCreationRequest(string characterName, string characterClass)
         {
             NotificationSystem.Instance.PushNotification("Creating character ...", false);
             NetworkClient.Send(new CharacterCreationRequest()
             {
-                CharacterInfo = characterInfo
+                Name = characterName,
+                Class = characterClass
             });
         }
 
         private void OnCharacterCreationRequest(NetworkConnection conn, CharacterCreationRequest msg)
         {
-            var connectionInfo = PlayerDataService.Instance.ConnectionInfos[conn];
+            var connectionInfo = ProfileService.Instance.ConnectionInfos[conn];
             var newCharacterInfos = connectionInfo.characters.ToList();
 
             string failMessage = "";
@@ -191,28 +190,23 @@ namespace Runtime
             {
                 failMessage = "Reached Character Count Limit";
             }
-            else if (msg.CharacterInfo.characterName.Length <= 1)
+            else if (msg.Name.Length <= 1)
             {
                 failMessage = "Invalid Character Name";
             }
-            // else if (msg.CharacterInfo.@class.Length <= 1)
-            // {
-            //     failMessage = "Invalid Character Class";
-            // }
+            else if (!Character.Classes.Contains(msg.Class))
+            {
+                failMessage = "Invalid Character Class";
+            }
             else
             {
-                // //TODO: Check stuff like if name is unique, give it a new unique ID
-                // msg.CharacterInfo.level = 1; //TODO: ? is this nice way to do this?
-                newCharacterInfos.Add(msg.CharacterInfo);
-
-                connectionInfo.characters = newCharacterInfos.ToArray();
-
-                conn.Send(new CharacterCreationResponse()
+                CharacterData characterData = new CharacterData()
                 {
-                    Code = ResponseCodeOk,
-                    CharacterInfos = connectionInfo.characters,
-                    Message = msg.CharacterInfo.characterName
-                });
+                    name = msg.Name,
+                    @class = msg.Class,
+                    level = 0
+                };
+                StartCoroutine(PostNewCharacter(conn, characterData));
                 return;
             }
 
@@ -223,13 +217,72 @@ namespace Runtime
             });
         }
 
+        private IEnumerator PostNewCharacter(NetworkConnection conn, CharacterData data, bool recursiveCall = false)
+        {
+            using (UnityWebRequest webRequest = new UnityWebRequest(CreateCharacterUri + data.name + "/" + ProfileService.Instance.ConnectionInfos[conn].steamId + "/" + ServerAuthenticator.Instance.authToken, "POST"))
+            {
+                webRequest.uploadHandler = new UploadHandlerRaw(data.Serialize());
+                webRequest.downloadHandler = new DownloadHandlerBuffer();
+
+                yield return webRequest.SendWebRequest();
+
+                if (webRequest.isNetworkError || webRequest.responseCode != 200)
+                {
+                    //if error and unauthorized
+                    if (!recursiveCall)
+                    {
+                        //get new token
+                        yield return StartCoroutine(ServerAuthenticator.Instance.GetAuthTokenRequest());
+
+                        //if token is null, the token request failed
+                        if (ServerAuthenticator.Instance.authToken == null)
+                        {
+                            ServerLogger.LogMessage("Error, auth token was null right after requesting.", ServerLogger.LogType.Error);
+                            ServerLogger.LogMessage("Aborting PostNewCharacter call!", ServerLogger.LogType.Error);
+                            conn.Send(new CharacterCreationResponse()
+                            {
+                                Code = ResponseCodeError,
+                                Message = "Couldn't create"
+                            });
+                        }
+                        else //if token is not null, we can try again to post status
+                        {
+                            ServerLogger.LogMessage("Trying again to update server status on API.", ServerLogger.LogType.Info);
+                            StartCoroutine(PostNewCharacter(conn, data,true));
+                        }
+                    }
+                    else
+                    {
+                        ServerLogger.LogMessage("Error while trying to push player data " + webRequest.error + webRequest.downloadHandler.text,
+                            ServerLogger.LogType.Error);
+                        ServerLogger.LogMessage("Aborting PostNewCharacter call!", ServerLogger.LogType.Error);
+                        conn.Send(new CharacterCreationResponse()
+                        {
+                            Code = ResponseCodeError,
+                            Message = "Couldn't create"
+                        });
+                    }
+                }
+                else
+                {
+                    ServerLogger.LogMessage("Successfully created new character.", ServerLogger.LogType.Success);
+                    conn.Send(new CharacterCreationResponse()
+                    {
+                        Code = ResponseCodeOk,
+                        Message = data.name
+                    });
+                }
+            }
+            
+
+        }
+
         private void OnCharacterCreationResponse(NetworkConnection conn, CharacterCreationResponse msg)
         {
             if (msg.Code == ResponseCodeOk)
             {
                 NotificationSystem.Instance.PushNotification("Successfully created character: " + msg.Message, true);
-                characterInfos = msg.CharacterInfos;
-                characterListChanged.Invoke();
+                GetCharactersFromDatabase();
             }
             else
             {
@@ -254,7 +307,7 @@ namespace Runtime
 
         private void OnCharacterDeletionRequest(NetworkConnection conn, CharacterDeletionRequest msg)
         {
-            var connectionInfo = PlayerDataService.Instance.ConnectionInfos[conn];
+            var connectionInfo = ProfileService.Instance.ConnectionInfos[conn];
             var newCharacterInfos = connectionInfo.characters.ToList();
 
             try
@@ -288,7 +341,7 @@ namespace Runtime
             {
                 NotificationSystem.Instance.PushNotification("Successfully deleted character: " + msg.Message, true);
 
-                characterInfos = msg.CharacterInfos;
+                // characters = msg.CharacterInfos;
                 characterListChanged.Invoke();
             }
             else
@@ -314,7 +367,7 @@ namespace Runtime
             ServerLogger.LogMessage("Player wants to play character " + msg.Name, ServerLogger.LogType.Info);
             try
             {
-                var matches = PlayerDataService.Instance.ConnectionInfos[conn].characters.Where(c => c.characterName == msg.Name);
+                var matches = ProfileService.Instance.ConnectionInfos[conn].characters.Where(c => c.characterName == msg.Name);
                 if (matches.Any())
                 {
                     var player = LoadPlayerCharacter(conn);

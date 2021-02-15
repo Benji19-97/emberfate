@@ -1,4 +1,5 @@
 ﻿using System;
+using Runtime.Models;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.UI;
@@ -34,10 +35,11 @@ namespace Runtime.UI
             buttonBackgroundImage.color = _defaultColor;
         }
 
-        public void SetCharacter(CharacterInfo info)
+        public void SetCharacter(Character info)
         {
-            nameText.text = info.characterName;
+            nameText.text = info.name;
             // infoText.text = "Level " + info.level + " " + info.@class;
+            infoText.text = info.ownerSteamId;
         }
 
         private void OnPress()

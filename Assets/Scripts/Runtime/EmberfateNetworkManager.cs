@@ -42,7 +42,7 @@ namespace Runtime
             loginMenu.SetActive(false);
             characterSelectionMenu.SetActive(true);
             CharacterService.Instance.RegisterClientHandlers();
-            CharacterService.Instance.SendCharacterListRequest();
+            CharacterService.Instance.GetCharactersFromDatabase();
         }
 
         public void Disconnect()
@@ -56,17 +56,17 @@ namespace Runtime
         {
             base.OnServerConnect(conn);
             FlexSceneManager.OnServerConnect(conn);
-            ServerLogger.LogMessage(PlayerDataService.Instance.ConnectionInfos[conn].name + " [" + PlayerDataService.Instance.ConnectionInfos[conn].steamId + "]" + " connected", ServerLogger.LogType.Info);
+            ServerLogger.LogMessage(ProfileService.Instance.ConnectionInfos[conn].name + " [" + ProfileService.Instance.ConnectionInfos[conn].steamId + "]" + " connected", ServerLogger.LogType.Info);
         }
 
         public override void OnServerDisconnect(NetworkConnection conn)
         {
             FlexSceneManager.OnServerDisconnect(conn);
             base.OnServerDisconnect(conn);
-            if (PlayerDataService.Instance.ConnectionInfos.ContainsKey(conn))
+            if (ProfileService.Instance.ConnectionInfos.ContainsKey(conn))
             {
-                StartCoroutine(PlayerDataService.Instance.PushPlayerData(conn, true));
-                ServerLogger.LogMessage(PlayerDataService.Instance.ConnectionInfos[conn].name + " disconnected.", ServerLogger.LogType.Info);
+                StartCoroutine(ProfileService.Instance.PushProfile(conn, true));
+                ServerLogger.LogMessage(ProfileService.Instance.ConnectionInfos[conn].name + " disconnected.", ServerLogger.LogType.Info);
             }
         }
 

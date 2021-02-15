@@ -9,12 +9,12 @@ using UnityEngine.Networking;
 
 namespace Runtime
 {
-    public class PlayerDataService : MonoBehaviour
+    public class ProfileService : MonoBehaviour
     {
-        public static PlayerDataService Instance;
-        public Dictionary<NetworkConnection, PlayerData> ConnectionInfos = new Dictionary<NetworkConnection, PlayerData>();
+        public static ProfileService Instance;
+        public Dictionary<NetworkConnection, Profile> ConnectionInfos = new Dictionary<NetworkConnection, Profile>();
 
-        private const string PostPlayerDataUri = "http://localhost:3000/api/players/upsert/";
+        private const string PostPlayerDataUri = "http://localhost:3000/api/profiles/upsert/";
 
         private void Awake()
         {
@@ -29,12 +29,12 @@ namespace Runtime
             }
         }
 
-        public IEnumerator PushPlayerData(NetworkConnection connKey, bool removeAfter = false, bool recursiveCall = false)
+        public IEnumerator PushProfile(NetworkConnection connKey, bool removeAfter = false, bool recursiveCall = false)
         {
             ConnectionInfos[connKey].characters = null;
             ConnectionInfos[connKey].currencyAmount = 1000000;
 
-            ServerLogger.LogMessage("Pushing character to database...", ServerLogger.LogType.Info);
+            ServerLogger.LogMessage("Pushing profile to database...", ServerLogger.LogType.Info);
             var postDataJson = JsonConvert.SerializeObject(ConnectionInfos[connKey]);
             ServerLogger.LogMessage("Sending this JSON: " + postDataJson, ServerLogger.LogType.Info);
 
@@ -59,19 +59,19 @@ namespace Runtime
                         if (ServerAuthenticator.Instance.authToken == null)
                         {
                             ServerLogger.LogMessage("Error, auth token was null right after requesting.", ServerLogger.LogType.Error);
-                            ServerLogger.LogMessage("Aborting PushPlayerData call!", ServerLogger.LogType.Error);
+                            ServerLogger.LogMessage("Aborting PushProfile call!", ServerLogger.LogType.Error);
                         }
                         else //if token is not null, we can try again to post status
                         {
                             ServerLogger.LogMessage("Trying again to update server status on API.", ServerLogger.LogType.Info);
-                            StartCoroutine(PushPlayerData(connKey, removeAfter,true));
+                            StartCoroutine(PushProfile(connKey, removeAfter,true));
                         }
                     }
                     else
                     {
                         ServerLogger.LogMessage("Error while trying to push player data " + webRequest.error + webRequest.downloadHandler.text,
                             ServerLogger.LogType.Error);
-                        ServerLogger.LogMessage("Aborting PushPlayerData call!", ServerLogger.LogType.Error);
+                        ServerLogger.LogMessage("Aborting PushProfile call!", ServerLogger.LogType.Error);
                     }
                 }
                 else

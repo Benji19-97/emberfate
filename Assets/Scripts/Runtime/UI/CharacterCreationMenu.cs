@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Linq;
+using Runtime.Models;
 using UnityEngine;
 using UnityEngine.UI;
 using CharacterInfo = Runtime.Models.CharacterInfo;
@@ -16,6 +18,8 @@ namespace Runtime.UI
 
         private void Start()
         {
+            classDropdown.ClearOptions();
+            classDropdown.AddOptions(Character.Classes.ToList());
             confirmButton.onClick.AddListener(OnConfirm);
             cancelButton.onClick.AddListener(OnCancel);
             CharacterService.Instance.characterCreationAnswer.AddListener(OnCancel);
@@ -23,12 +27,7 @@ namespace Runtime.UI
 
         private void OnConfirm()
         {
-            CharacterService.Instance.SendCharacterCreationRequest(new CharacterInfo()
-            {
-                characterName = nameInputField.text,
-                // @class = classDropdown.options[classDropdown.value].text
-            });
-            
+            CharacterService.Instance.SendCharacterCreationRequest(nameInputField.text, classDropdown.options[classDropdown.value].text);
             nameInputField.interactable = false;
             classDropdown.interactable = false;
         }

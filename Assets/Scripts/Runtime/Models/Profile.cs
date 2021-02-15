@@ -3,7 +3,7 @@
 namespace Runtime.Models
 {
     [Serializable]
-    public class PlayerData
+    public class Profile
     {
         public string steamId;
         public string name;

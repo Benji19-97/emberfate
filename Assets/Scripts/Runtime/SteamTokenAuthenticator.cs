@@ -22,7 +22,7 @@ namespace Runtime
         private const string WebApiKeyPath = "data/web_api_key.txt";
         private const string SteamAppIdPath = "data/steam_appid.txt";
         private const string SteamApiUserAuthUri = "https://partner.steam-api.com/ISteamUserAuth/AuthenticateUserTicket/v1/";
-        private const string GetPlayerDataUri = "http://localhost:3000/api/players/";
+        private const string GetPlayerDataUri = "http://localhost:3000/api/profiles/";
 
         private struct AuthRequestMessage : NetworkMessage
         {
@@ -220,9 +220,9 @@ namespace Runtime
                 {
                     ServerLogger.LogMessage("Successfully fetched player data for " + steamId, ServerLogger.LogType.Success);
                     ServerLogger.LogMessage("Data:" + webRequest.downloadHandler.text, ServerLogger.LogType.Success);
-                    var playerData = JsonConvert.DeserializeObject<PlayerData>(webRequest.downloadHandler.text);
+                    var playerData = JsonConvert.DeserializeObject<Profile>(webRequest.downloadHandler.text);
                     playerData.name = steamName;
-                    PlayerDataService.Instance.ConnectionInfos.Add(conn, playerData);
+                    ProfileService.Instance.ConnectionInfos.Add(conn, playerData);
                     AuthResponseMessage authResponseMessage = new AuthResponseMessage();
                     conn.Send(authResponseMessage);
                     OnServerAuthenticated.Invoke(conn);
