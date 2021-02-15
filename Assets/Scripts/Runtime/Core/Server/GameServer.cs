@@ -5,6 +5,7 @@ using kcp2k;
 using Mirror;
 using Newtonsoft.Json;
 using Runtime.Endpoints;
+using Runtime.Helpers;
 using Runtime.Models;
 using UnityEngine;
 
@@ -22,9 +23,9 @@ namespace Runtime
 
         public static GameServer Instance { get; private set; }
 
-        
-
         public ServerConfig Config { get; private set; }
+
+        #region Unity Event functions
 
         private void Awake()
         {
@@ -65,17 +66,35 @@ namespace Runtime
                 port = Config.port
             });
         }
-
-        public void StartServer()
+        
+        private void OnApplicationQuit()
         {
-            NetworkManager.singleton.networkAddress = Config.ip;
-            NetworkManager.singleton.maxConnections = Config.maxConnections;
-            NetworkManager.singleton.GetComponent<KcpTransport>().Port = (ushort) Config.port;
-            NetworkManager.singleton.StartServer();
+#if UNITY_SERVER
+            StopServer();
+            return;
+#elif UNITY_EDITOR
+            if (START_SERVER_IN_UNITY_EDITOR)
+            {
+                StopServer();
+                return;
+            }
+#endif
+            EmberfateNetworkManager.Instance.StopClient();
         }
 
-        public void OnStopServer()
+        #endregion
+        
+        public void StartServer()
         {
+            EmberfateNetworkManager.Instance.networkAddress = Config.ip;
+            EmberfateNetworkManager.Instance.maxConnections = Config.maxConnections;
+            EmberfateNetworkManager.Instance.GetComponent<KcpTransport>().Port = (ushort) Config.port;
+            EmberfateNetworkManager.Instance.StartServer();
+        }
+
+        public void StopServer()
+        {
+            ServerLogger.LogWarning("Stopping server...");
             ServerStatusService.Instance.SendServerStatusPostRequest(new ServerStatus()
             {
                 name = Config.name,
@@ -85,6 +104,8 @@ namespace Runtime
                 status = "offline",
                 port = Config.port
             });
+            
+            EmberfateNetworkManager.Instance.StopServer();
         }
 #endif
     }

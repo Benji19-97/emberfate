@@ -10,10 +10,10 @@ using UnityEngine.Networking;
 
 namespace Runtime
 {
-    public class ServerAuthenticator : MonoBehaviour
+    public class ServerAuthenticationService : MonoBehaviour
     {
 #if UNITY_SERVER || UNITY_EDITOR
-        public static ServerAuthenticator Instance;
+        public static ServerAuthenticationService Instance;
         public string serverAuthToken { get; private set; }
 
         #region Unity Event functions

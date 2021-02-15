@@ -37,7 +37,7 @@ namespace Runtime
         [Server]
         public IEnumerator FetchProfileCoroutine(NetworkConnection conn, string steamId, bool recursiveCall = false)
         {
-            using (UnityWebRequest webRequest = UnityWebRequest.Get(EndpointRegister.GetServerFetchProfileUrl(steamId, ServerAuthenticator.Instance.serverAuthToken)))
+            using (UnityWebRequest webRequest = UnityWebRequest.Get(EndpointRegister.GetServerFetchProfileUrl(steamId, ServerAuthenticationService.Instance.serverAuthToken)))
             {
                 yield return webRequest.SendWebRequest();
 
@@ -51,9 +51,9 @@ namespace Runtime
                 {
                     if (!recursiveCall)
                     {
-                        yield return StartCoroutine(ServerAuthenticator.Instance.FetchAuthTokenCoroutine());
+                        yield return StartCoroutine(ServerAuthenticationService.Instance.FetchAuthTokenCoroutine());
 
-                        if (ServerAuthenticator.Instance.serverAuthToken != null)
+                        if (ServerAuthenticationService.Instance.serverAuthToken != null)
                         {
                             StartCoroutine(FetchProfileCoroutine(conn, steamId, true));
                         }
@@ -79,7 +79,7 @@ namespace Runtime
         {
             var attachedJson = JsonConvert.SerializeObject(ConnectionInfos[connKey]);
             using (UnityWebRequest webRequest = WebRequestHelper.GetPostRequest(
-                EndpointRegister.GetServerUpsertProfileUrl(ConnectionInfos[connKey].steamId, ServerAuthenticator.Instance.serverAuthToken), attachedJson))
+                EndpointRegister.GetServerUpsertProfileUrl(ConnectionInfos[connKey].steamId, ServerAuthenticationService.Instance.serverAuthToken), attachedJson))
             {
                 yield return webRequest.SendWebRequest();
 
@@ -93,9 +93,9 @@ namespace Runtime
                 {
                     if (!recursiveCall)
                     {
-                        yield return StartCoroutine(ServerAuthenticator.Instance.FetchAuthTokenCoroutine());
+                        yield return StartCoroutine(ServerAuthenticationService.Instance.FetchAuthTokenCoroutine());
 
-                        if (ServerAuthenticator.Instance.serverAuthToken != null)
+                        if (ServerAuthenticationService.Instance.serverAuthToken != null)
                         {
                             StartCoroutine(UpsertProfileCoroutine(connKey, removeAfter, true));
                         }

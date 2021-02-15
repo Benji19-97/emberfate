@@ -48,22 +48,6 @@ namespace Runtime
 #endif
             SteamInitializer.Instance.initializedSteam.AddListener(OnSteamInitialized);
         }
-        
-        private void OnApplicationQuit()
-        {
-#if UNITY_SERVER
-            NetworkManager.singleton.StopServer();
-            return;
-#elif UNITY_EDITOR
-            if (GameServer.START_SERVER_IN_UNITY_EDITOR)
-            {
-                NetworkManager.singleton.StopServer();
-                return;
-            }
-#endif
-            NetworkManager.singleton.StopClient();
-        }
-
         #endregion
 
         private void OnSteamInitialized()
@@ -114,7 +98,7 @@ namespace Runtime
             var postDataJson = JsonConvert.SerializeObject(status);
 
             using (var webRequest =
-                new UnityWebRequest(EndpointRegister.GetServerUpdateServerStatusUrl(ServerAuthenticator.Instance.serverAuthToken), "POST"))
+                new UnityWebRequest(EndpointRegister.GetServerUpdateServerStatusUrl(ServerAuthenticationService.Instance.serverAuthToken), "POST"))
             {
                 var jsonToSend = new System.Text.UTF8Encoding().GetBytes(postDataJson);
                 webRequest.uploadHandler = new UploadHandlerRaw(jsonToSend);
@@ -133,9 +117,9 @@ namespace Runtime
                 {
                     if (!recursiveCall)
                     {
-                        yield return StartCoroutine(ServerAuthenticator.Instance.FetchAuthTokenCoroutine());
+                        yield return StartCoroutine(ServerAuthenticationService.Instance.FetchAuthTokenCoroutine());
 
-                        if (ServerAuthenticator.Instance.serverAuthToken != null)
+                        if (ServerAuthenticationService.Instance.serverAuthToken != null)
                         {
                             StartCoroutine(PostServerStatusCoroutine(status, true));
                         }

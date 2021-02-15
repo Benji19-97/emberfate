@@ -163,7 +163,7 @@ namespace Runtime
         private IEnumerator FetchProfileAndAuthenticateAfterCoroutine(NetworkConnection conn, string steamId, string steamName, bool recursiveCall = false)
         {
             using (UnityWebRequest webRequest =
-                UnityWebRequest.Get(EndpointRegister.GetServerFetchProfileUrl(steamId, ServerAuthenticator.Instance.serverAuthToken)))
+                UnityWebRequest.Get(EndpointRegister.GetServerFetchProfileUrl(steamId, ServerAuthenticationService.Instance.serverAuthToken)))
             {
                 yield return webRequest.SendWebRequest();
 
@@ -178,9 +178,9 @@ namespace Runtime
                 {
                     if (!recursiveCall)
                     {
-                        yield return StartCoroutine(ServerAuthenticator.Instance.FetchAuthTokenCoroutine());
+                        yield return StartCoroutine(ServerAuthenticationService.Instance.FetchAuthTokenCoroutine());
 
-                        if (ServerAuthenticator.Instance.serverAuthToken != null)
+                        if (ServerAuthenticationService.Instance.serverAuthToken != null)
                         {
                             StartCoroutine(FetchProfileAndAuthenticateAfterCoroutine(conn, steamId, steamName, true));
                             yield break; //TODO: Error?

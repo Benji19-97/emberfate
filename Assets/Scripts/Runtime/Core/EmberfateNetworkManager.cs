@@ -69,27 +69,21 @@ namespace Runtime
 
         public override void OnStopServer()
         {
-            ServerLogger.LogWarning("Stopping server...");
-#if UNITY_SERVER
-            GameServer.Instance.OnStopServer();
-#endif
-#if UNITY_EDITOR
-            if (GameServer.START_SERVER_IN_UNITY_EDITOR)
-            {
-                GameServer.Instance.OnStopServer();
-            }
-#endif
+            //use GameServer 'StopServer' method instead of this
         }
 
         public override void OnStartServer()
         {
-#if UNITY_SERVER
-             ServerLogger.Log(
+#if UNITY_SERVER || UNITY_EDITOR
+            ServerLogger.LogSuccess(
                 $"Started server {GameServer.Instance.Config.name}[{GameServer.Instance.Config.location}] " +
                 $"on {GameServer.Instance.Config.ip}:{GameServer.Instance.Config.port} " +
-                $"with {GameServer.Instance.Config.maxConnections} maximum connections.",
-                ServerLogger.LogType.Success);
+                $"with {GameServer.Instance.Config.maxConnections} maximum connections.");
 #endif
+        }
+
+        public override void OnApplicationQuit()
+        {
         }
     }
 }
