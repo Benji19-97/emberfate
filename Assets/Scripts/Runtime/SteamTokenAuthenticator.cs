@@ -4,6 +4,7 @@ using System.IO;
 using Mirror;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Runtime.Endpoints;
 using Runtime.Models;
 using Telepathy;
 using UnityEngine;
@@ -21,8 +22,7 @@ namespace Runtime
         private const int OkResponseCode = 200;
         private const string WebApiKeyPath = "data/web_api_key.txt";
         private const string SteamAppIdPath = "data/steam_appid.txt";
-        private const string SteamApiUserAuthUri = "https://partner.steam-api.com/ISteamUserAuth/AuthenticateUserTicket/v1/";
-        private const string GetPlayerDataUri = "http://localhost:3000/api/profiles/";
+
 
         private struct AuthRequestMessage : NetworkMessage
         {
@@ -94,7 +94,8 @@ namespace Runtime
                     FetchAppId();
                 }
 
-                uri = SteamApiUserAuthUri +  $"?key={_webAPIKey}&ticket={ticket}&appid={_appID}";
+                //uri = SteamApiUserAuthUri +  $"?key={_webAPIKey}&ticket={ticket}&appid={_appID}";
+                uri = EndpointRegister.GetServerSteamApiUserAuthUrl(_webAPIKey, ticket, _appID);
                 webRequest = UnityWebRequest.Get(uri);
             }
             catch (Exception e)
@@ -183,7 +184,7 @@ namespace Runtime
         private IEnumerator GetPlayerDataAndAuthenticate(NetworkConnection conn, string steamId, string steamName, bool recursiveCall = false)
         {
             ServerLogger.LogMessage("Fetching player data for " + steamId, ServerLogger.LogType.Info);
-            using (UnityWebRequest webRequest = UnityWebRequest.Get(GetPlayerDataUri + steamId + "/" + ServerAuthenticator.Instance.authToken))
+            using (UnityWebRequest webRequest = UnityWebRequest.Get(EndpointRegister.GetServerFetchProfileUrl(steamId, ServerAuthenticator.Instance.authToken)))
             {
                 yield return webRequest.SendWebRequest();
 

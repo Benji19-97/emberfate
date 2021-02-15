@@ -2,6 +2,7 @@
 using System.Collections;
 using System.IO;
 using Newtonsoft.Json;
+using Runtime.Endpoints;
 using UnityEngine;
 using UnityEngine.Networking;
 
@@ -12,7 +13,7 @@ namespace Runtime
 #if UNITY_SERVER || UNITY_EDITOR
         public static ServerAuthenticator Instance;
 
-        private const string GetAuthTokenUri = "http://localhost:3000/api/authentication/token";
+
 
         private const string PasswordPath = "data/password.txt";
 
@@ -50,7 +51,7 @@ namespace Runtime
             var bodyJson = JsonConvert.SerializeObject(bodyObject);
 
 
-            using (UnityWebRequest webRequest = new UnityWebRequest(GetAuthTokenUri, "POST"))
+            using (UnityWebRequest webRequest = new UnityWebRequest(EndpointRegister.GetServerFetchAuthTokenUrl(), "POST"))
             {
                 byte[] jsonToSend = new System.Text.UTF8Encoding().GetBytes(bodyJson);
                 webRequest.uploadHandler = new UploadHandlerRaw(jsonToSend);

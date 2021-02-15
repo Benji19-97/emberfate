@@ -6,6 +6,7 @@ using FirstGearGames.FlexSceneManager.LoadUnloadDatas;
 using Mirror;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Runtime.Endpoints;
 using Runtime.Models;
 using Runtime.UI;
 using UnityEngine;
@@ -68,10 +69,6 @@ namespace Runtime
         private const short ResponseCodeOk = 200;
         private const short ResponseCodeError = 401;
 
-        private const string GetCharacterUri = "http://localhost:3003/api/characters/";
-        private const string GetCharacterAsServerUri = "http://localhost:3000/api/characters/";
-        private const string CreateCharacterUri = "http://localhost:3000/api/characters/create/";
-        private const string DeleteCharacterUri = "http://localhost:3000/api/characters/delete/";
 
         [Header("Scenes")] [Scene] [SerializeField]
         private string townHubScene;
@@ -136,7 +133,8 @@ namespace Runtime
             NotificationSystem.Instance.PushNotification("Retrieving characters ...", false);
 
             using (UnityWebRequest webRequest =
-                UnityWebRequest.Get(GetCharacterUri + Steamworks.SteamUser.GetSteamID().m_SteamID + "/all/?token=" + SteamTokenAuthenticator.AuthTicket))
+                UnityWebRequest.Get(EndpointRegister.GetClientFetchAllCharactersUrl(Steamworks.SteamUser.GetSteamID().m_SteamID.ToString(),
+                    SteamTokenAuthenticator.AuthTicket)))
             {
                 yield return webRequest.SendWebRequest();
 
@@ -167,16 +165,12 @@ namespace Runtime
         private IEnumerator ServerFetchCharacter(NetworkConnection conn, string characterId, bool recursiveCall = false)
         {
 #if UNITY_SERVER || UNITY_EDITOR
-            ServerLogger.LogMessage("ServerFetchCharacter", ServerLogger.LogType.Message);
 
             using (UnityWebRequest webRequest =
-                UnityWebRequest.Get(GetCharacterAsServerUri + "/" + characterId + "/" + ServerAuthenticator.Instance.authToken))
+                UnityWebRequest.Get(EndpointRegister.GetServerFetchCharacterUrl(characterId, ServerAuthenticator.Instance.authToken)))
             {
-                ServerLogger.LogMessage("sent webrequest", ServerLogger.LogType.Message);
-
                 yield return webRequest.SendWebRequest();
 
-                ServerLogger.LogMessage("received answer on webrequest", ServerLogger.LogType.Message);
 
                 if (webRequest.isNetworkError || webRequest.responseCode != 200)
                 {
@@ -275,7 +269,8 @@ namespace Runtime
 #if UNITY_SERVER || UNITY_EDITOR
             using (UnityWebRequest webRequest =
                 new UnityWebRequest(
-                    CreateCharacterUri + data.name + "/" + ProfileService.Instance.ConnectionInfos[conn].steamId + "/" + ServerAuthenticator.Instance.authToken,
+                    EndpointRegister.GetServerCreateCharacterUrl(data.name, ProfileService.Instance.ConnectionInfos[conn].steamId,
+                        ServerAuthenticator.Instance.authToken),
                     "POST"))
             {
                 webRequest.uploadHandler = new UploadHandlerRaw(data.Serialize());
@@ -392,9 +387,10 @@ namespace Runtime
         private IEnumerator DeleteCharacter(NetworkConnection conn, string characterId, bool recursiveCall = false)
         {
 #if UNITY_SERVER || UNITY_EDITOR
+
             using (UnityWebRequest webRequest = UnityWebRequest.Delete(
-                DeleteCharacterUri + characterId + "/" + ProfileService.Instance.ConnectionInfos[conn].steamId + "/" +
-                ServerAuthenticator.Instance.authToken))
+                EndpointRegister.GetServerDeleteCharacterUrl(characterId, ServerAuthenticator.Instance.authToken)
+            ))
             {
                 yield return webRequest.SendWebRequest();
 

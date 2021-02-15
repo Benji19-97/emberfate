@@ -3,6 +3,7 @@ using System.Collections;
 using System.IO;
 using Mirror;
 using Newtonsoft.Json;
+using Runtime.Endpoints;
 using Runtime.Models;
 using Runtime.UI;
 using UnityEngine;
@@ -19,8 +20,7 @@ namespace Runtime
 
         [HideInInspector] public UnityEvent serverStatusReceived;
 
-        private const string GetServerStatusUri = "http://localhost:3001/api/serverstatus";
-        private const string PostServerStatusUri = "http://localhost:3000/api/serverstatus/update/";
+
 
         private void Awake()
         {
@@ -62,7 +62,7 @@ namespace Runtime
         private IEnumerator GetRequest()
         {
             NotificationSystem.Instance.PushNotification("Retrieving server status ...", false);
-            using (UnityWebRequest webRequest = UnityWebRequest.Get(GetServerStatusUri))
+            using (UnityWebRequest webRequest = UnityWebRequest.Get(EndpointRegister.GetClientFetchServerStatusUrl()))
             {
                 yield return webRequest.SendWebRequest();
 
@@ -90,7 +90,7 @@ namespace Runtime
             ServerLogger.LogMessage("Updating server status on API...", ServerLogger.LogType.Info);
             var postDataJson = JsonConvert.SerializeObject(status);
 
-            using (UnityWebRequest webRequest = new UnityWebRequest(PostServerStatusUri + ServerAuthenticator.Instance.authToken, "POST"))
+            using (UnityWebRequest webRequest = new UnityWebRequest(EndpointRegister.GetServerUpdateServerStatusUrl(ServerAuthenticator.Instance.authToken), "POST"))
             {
                 byte[] jsonToSend = new System.Text.UTF8Encoding().GetBytes(postDataJson);
                 webRequest.uploadHandler = new UploadHandlerRaw(jsonToSend);

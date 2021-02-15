@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using Mirror;
 using Newtonsoft.Json;
+using Runtime.Endpoints;
 using Runtime.Models;
 using UnityEngine;
 using UnityEngine.Networking;
@@ -14,8 +15,6 @@ namespace Runtime
         public static ProfileService Instance;
         public Dictionary<NetworkConnection, Profile> ConnectionInfos = new Dictionary<NetworkConnection, Profile>();
 
-        private const string PostPlayerDataUri = "http://localhost:3000/api/profiles/upsert/";
-        private const string GetPlayerDataUri = "http://localhost:3000/api/profiles/";
 
         private void Awake()
         {
@@ -34,7 +33,9 @@ namespace Runtime
         {
 #if UNITY_SERVER || UNITY_EDITOR
             ServerLogger.LogMessage("Fetching profile data for " + steamId, ServerLogger.LogType.Info);
-            using (UnityWebRequest webRequest = UnityWebRequest.Get(GetPlayerDataUri + steamId + "/" + ServerAuthenticator.Instance.authToken))
+
+
+            using (UnityWebRequest webRequest = UnityWebRequest.Get(EndpointRegister.GetServerFetchProfileUrl(steamId, ServerAuthenticator.Instance.authToken)))
             {
                 yield return webRequest.SendWebRequest();
 
@@ -63,7 +64,6 @@ namespace Runtime
                             ServerLogger.LogType.Error);
                         ServerLogger.LogMessage("Aborting GetPlayerData call!", ServerLogger.LogType.Error);
                     }
-
                 }
                 else
                 {
@@ -86,7 +86,8 @@ namespace Runtime
             ServerLogger.LogMessage("Sending this JSON: " + postDataJson, ServerLogger.LogType.Info);
 
             using (UnityWebRequest webRequest =
-                new UnityWebRequest(PostPlayerDataUri + ConnectionInfos[connKey].steamId + "/" + ServerAuthenticator.Instance.authToken, "POST"))
+                new UnityWebRequest(EndpointRegister.GetServerUpsertProfileUrl(ConnectionInfos[connKey].steamId, ServerAuthenticator.Instance.authToken),
+                    "POST"))
             {
                 byte[] jsonToSend = new System.Text.UTF8Encoding().GetBytes(postDataJson);
                 webRequest.uploadHandler = new UploadHandlerRaw(jsonToSend);
