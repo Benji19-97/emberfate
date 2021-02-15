@@ -5,7 +5,7 @@ namespace Runtime
 {
     public static class ServerLogger
     {
-#if UNITY_SERVER || UNITY_EDITOR
+
         public enum LogType
         {
             Message = ConsoleColor.White,
@@ -28,6 +28,5 @@ namespace Runtime
             }
 #endif
         }
-#endif
     }
 }

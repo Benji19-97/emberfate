@@ -2112,15 +2112,18 @@ MonoBehaviour:
   m_GameObject: {fileID: 456835714}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c7424c1070fad4ba2a7a96b02fbeb4bb, type: 3}
+  m_Script: {fileID: 11500000, guid: 6b0fecffa3f624585964b0d0eb21b18e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  port: 7777
+  Port: 7777
   NoDelay: 1
-  serverMaxMessageSize: 16384
-  serverMaxReceivesPerTick: 10000
-  clientMaxMessageSize: 16384
-  clientMaxReceivesPerTick: 1000
+  Interval: 10
+  FastResend: 2
+  CongestionWindow: 0
+  SendWindowSize: 128
+  ReceiveWindowSize: 128
+  debugLog: 0
+  debugGUI: 0
 --- !u!114 &456835716
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3431,7 +3434,7 @@ MonoBehaviour:
   characterCreationAnswer:
     m_PersistentCalls:
       m_Calls: []
-  characterInfos: []
+  characters: []
   townHubScene: Assets/Scenes/TownHubScene.unity
 --- !u!4 &806825242
 Transform:

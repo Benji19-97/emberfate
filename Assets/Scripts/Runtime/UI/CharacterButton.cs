@@ -13,7 +13,7 @@ namespace Runtime.UI
         private static readonly UnityEvent ResetSelection = new UnityEvent();
 #pragma warning restore 649
 
-        public static string selectedCharacter { get; private set; }
+        public static string selectedCharacterId { get; private set; }
 
         [SerializeField] private Button selectButton;
         [SerializeField] private Image buttonBackgroundImage;
@@ -21,6 +21,8 @@ namespace Runtime.UI
         [SerializeField] private Text infoText;
         [SerializeField] private Color selectedColor;
 
+        private Character _attachedCharacter;
+        
         private Color _defaultColor;
 
         private void Start()
@@ -35,17 +37,18 @@ namespace Runtime.UI
             buttonBackgroundImage.color = _defaultColor;
         }
 
-        public void SetCharacter(Character info)
+        public void SetCharacter(Character character)
         {
-            nameText.text = info.name;
+            _attachedCharacter = character;
+            nameText.text = character.name;
             // infoText.text = "Level " + info.level + " " + info.@class;
-            infoText.text = info.ownerSteamId;
+            infoText.text = character.ownerSteamId;
         }
 
         private void OnPress()
         {
             ResetSelection.Invoke();
-            selectedCharacter = nameText.text;
+            selectedCharacterId = _attachedCharacter.id;
             buttonBackgroundImage.color = selectedColor;
         }
         

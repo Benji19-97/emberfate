@@ -11,11 +11,12 @@ namespace Runtime
 {
     public class GameServer : MonoBehaviour
     {
+
 #if UNITY_SERVER || UNITY_EDITOR
 
 #if UNITY_EDITOR
         // ReSharper disable once InconsistentNaming
-        public static bool START_SERVER_IN_UNITY_EDITOR = false;
+        public static bool START_SERVER_IN_UNITY_EDITOR = true;
 #endif
 
         public static GameServer Instance { get; private set; }
@@ -68,7 +69,7 @@ namespace Runtime
         {
             NetworkManager.singleton.networkAddress = Config.ip;
             NetworkManager.singleton.maxConnections = Config.maxConnections;
-            NetworkManager.singleton.GetComponent<TelepathyTransport>().port = (ushort) Config.port;
+            NetworkManager.singleton.GetComponent<KcpTransport>().Port = (ushort) Config.port;
             NetworkManager.singleton.StartServer();
         }
 

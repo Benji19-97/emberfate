@@ -11,5 +11,7 @@ namespace Runtime.Models
         public Stash stash;
         public CharacterInfo[] characters;
         public byte maxCharacterCount;
+
+        [NonSerialized] public Character PlayingCharacter = null;
     }
 }

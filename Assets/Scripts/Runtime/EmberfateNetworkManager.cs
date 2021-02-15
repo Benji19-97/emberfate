@@ -54,19 +54,19 @@ namespace Runtime
 
         public override void OnServerConnect(NetworkConnection conn)
         {
-            base.OnServerConnect(conn);
             FlexSceneManager.OnServerConnect(conn);
-            ServerLogger.LogMessage(ProfileService.Instance.ConnectionInfos[conn].name + " [" + ProfileService.Instance.ConnectionInfos[conn].steamId + "]" + " connected", ServerLogger.LogType.Info);
+            ServerLogger.LogMessage(conn + " connected.", ServerLogger.LogType.Info);
         }
 
         public override void OnServerDisconnect(NetworkConnection conn)
         {
             FlexSceneManager.OnServerDisconnect(conn);
-            base.OnServerDisconnect(conn);
+
             if (ProfileService.Instance.ConnectionInfos.ContainsKey(conn))
             {
-                StartCoroutine(ProfileService.Instance.PushProfile(conn, true));
-                ServerLogger.LogMessage(ProfileService.Instance.ConnectionInfos[conn].name + " disconnected.", ServerLogger.LogType.Info);
+                //StartCoroutine(ProfileService.Instance.PushProfile(conn, true));
+                ProfileService.Instance.ConnectionInfos.Remove(conn);
+                ServerLogger.LogMessage( conn  + "  disconnected", ServerLogger.LogType.Success);
             }
         }
 
@@ -82,17 +82,17 @@ namespace Runtime
                 GameServer.Instance.OnStopServer();
             }
 #endif
-            base.OnStopServer();
         }
 
         public override void OnStartServer()
         {
-            ServerLogger.LogMessage(
+#if UNITY_SERVER
+             ServerLogger.LogMessage(
                 $"Started server {GameServer.Instance.Config.name}[{GameServer.Instance.Config.location}] " +
                 $"on {GameServer.Instance.Config.ip}:{GameServer.Instance.Config.port} " +
                 $"with {GameServer.Instance.Config.maxConnections} maximum connections.",
                 ServerLogger.LogType.Success);
-            base.OnStartServer();
+#endif
         }
     }
 }

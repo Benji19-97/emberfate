@@ -35,18 +35,18 @@ namespace Runtime.UI
 
         public void DeleteCharacter()
         {
-            if (!string.IsNullOrEmpty(CharacterButton.selectedCharacter))
+            if (!string.IsNullOrEmpty(CharacterButton.selectedCharacterId))
             {
                 //TODO: Context window to ask if you really want to delete, including a warning
-                CharacterService.Instance.SendCharacterDeletionRequest(CharacterButton.selectedCharacter); //TODO: this needs to be an ID or smth
+                CharacterService.Instance.SendCharacterDeletionRequest(CharacterButton.selectedCharacterId); 
             }
         }
 
         public void OnPlay()
         {
-            if (!string.IsNullOrEmpty(CharacterButton.selectedCharacter))
+            if (!string.IsNullOrEmpty(CharacterButton.selectedCharacterId))
             {
-                CharacterService.Instance.SendCharacterPlayRequest(CharacterButton.selectedCharacter); //TODO: this needs to be an ID or smth
+                CharacterService.Instance.SendCharacterPlayRequest(CharacterButton.selectedCharacterId);
             }
         }
     
