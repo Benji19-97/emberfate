@@ -3,6 +3,8 @@ using System.Collections;
 using System.IO;
 using Newtonsoft.Json;
 using Runtime.Endpoints;
+using Runtime.Helpers;
+using Runtime.Utils;
 using UnityEngine;
 using UnityEngine.Networking;
 
@@ -12,13 +14,9 @@ namespace Runtime
     {
 #if UNITY_SERVER || UNITY_EDITOR
         public static ServerAuthenticator Instance;
+        public string serverAuthToken { get; private set; }
 
-
-
-        private const string PasswordPath = "data/password.txt";
-
-        public string authToken { get; private set; }
-
+        #region Unity Event functions
         private void Awake()
         {
 #if UNITY_EDITOR
@@ -27,7 +25,6 @@ namespace Runtime
                 Destroy(gameObject);
             }
 #endif
-
             if (Instance == null)
             {
                 Instance = this;
@@ -38,51 +35,39 @@ namespace Runtime
                 Destroy(gameObject);
             }
         }
+        #endregion
 
-        public IEnumerator GetAuthTokenRequest()
+        public IEnumerator FetchAuthTokenCoroutine()
         {
-            ServerLogger.LogMessage("Requesting auth token ...", ServerLogger.LogType.Info);
-            var bodyObject = new
+            var attachedJson = JsonConvert.SerializeObject(new
             {
                 name = GameServer.Instance.Config.name,
                 password = ReadServerPassword()
-            };
+            });
 
-            var bodyJson = JsonConvert.SerializeObject(bodyObject);
-
-
-            using (UnityWebRequest webRequest = new UnityWebRequest(EndpointRegister.GetServerFetchAuthTokenUrl(), "POST"))
+            using (UnityWebRequest webRequest = WebRequestHelper.GetPostRequest(EndpointRegister.GetServerFetchAuthTokenUrl(), attachedJson))
             {
-                byte[] jsonToSend = new System.Text.UTF8Encoding().GetBytes(bodyJson);
-                webRequest.uploadHandler = new UploadHandlerRaw(jsonToSend);
-                webRequest.downloadHandler = new DownloadHandlerBuffer();
-                webRequest.SetRequestHeader("Content-Type", "application/json");
-
                 yield return webRequest.SendWebRequest();
 
-                if (webRequest.isNetworkError || webRequest.responseCode != 200)
+                if (webRequest.isNetworkError)
                 {
-                    ServerLogger.LogMessage("Error requesting authentication token: " + webRequest.error, ServerLogger.LogType.Error);
-                    ServerLogger.LogMessage(webRequest.downloadHandler.text, ServerLogger.LogType.Error);
-                    authToken = null;
+                    ServerLogger.LogError(webRequest.error);
+                    serverAuthToken = null;
+                    yield break;
                 }
-                else
-                {
-                    ServerLogger.LogMessage("Received authentication token.", ServerLogger.LogType.Success);
-                    authToken = webRequest.downloadHandler.text;
-                }
+
+                serverAuthToken = webRequest.isHttpError ? null : webRequest.downloadHandler.text;
             }
         }
 
-        private string ReadServerPassword()
+        private static string ReadServerPassword()
         {
-            string path = PasswordPath;
-            StreamReader reader = new StreamReader(path);
+            var path = PathRegister.Server_PasswordPath;
+            var reader = new StreamReader(path);
             var pw = reader.ReadToEnd();
             reader.Close();
             return pw;
         }
-
 #endif
     }
 }

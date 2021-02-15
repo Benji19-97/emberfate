@@ -5,6 +5,7 @@ using Mirror;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Runtime.Endpoints;
+using Runtime.Helpers;
 using Runtime.Models;
 using Telepathy;
 using UnityEngine;
@@ -20,9 +21,6 @@ namespace Runtime
         private string _appID;
 
         private const int OkResponseCode = 200;
-        private const string WebApiKeyPath = "data/web_api_key.txt";
-        private const string SteamAppIdPath = "data/steam_appid.txt";
-
 
         private struct AuthRequestMessage : NetworkMessage
         {
@@ -33,9 +31,7 @@ namespace Runtime
 
         private struct AuthResponseMessage : NetworkMessage
         {
-#pragma warning disable 649
             public string FailReason;
-#pragma warning restore 649
         }
 
         [Serializable]
@@ -43,7 +39,6 @@ namespace Runtime
         {
             public string result;
             public string steamid;
-            public string ownersteamid;
             public bool vacbanned;
             public bool publisherbanned;
         }
@@ -73,15 +68,14 @@ namespace Runtime
 
         private void OnAuthRequestMessage(NetworkConnection conn, AuthRequestMessage msg)
         {
-            ServerLogger.LogMessage("Received auth request. Name: " + msg.PersonaName + " SteamId: " + msg.SteamId, ServerLogger.LogType.Info);
-            StartCoroutine(__ValidateToken(conn, msg.Ticket, msg.SteamId, msg.PersonaName));
+            StartCoroutine(ValidateTokenGetRequestCoroutine(conn, msg.Ticket, msg.SteamId, msg.PersonaName));
         }
 
-        private IEnumerator __ValidateToken(NetworkConnection conn, string ticket, string steamid, string steamName)
+        [Server]
+        private IEnumerator ValidateTokenGetRequestCoroutine(NetworkConnection conn, string ticket, string steamid, string steamName)
         {
-            string uri;
             UnityWebRequest webRequest;
-        
+
             try
             {
                 if (string.IsNullOrEmpty(_webAPIKey))
@@ -94,21 +88,13 @@ namespace Runtime
                     FetchAppId();
                 }
 
-                //uri = SteamApiUserAuthUri +  $"?key={_webAPIKey}&ticket={ticket}&appid={_appID}";
-                uri = EndpointRegister.GetServerSteamApiUserAuthUrl(_webAPIKey, ticket, _appID);
-                webRequest = UnityWebRequest.Get(uri);
+                var steamApiUserAuthUrl = EndpointRegister.GetServerSteamApiUserAuthUrl(_webAPIKey, ticket, _appID);
+                webRequest = UnityWebRequest.Get(steamApiUserAuthUrl);
             }
             catch (Exception e)
             {
-                ServerLogger.LogMessage(e.Message, ServerLogger.LogType.Error);
-                ValidateTokenFailed(conn, "Server Exception");
-                yield break;
-            }
-
-            if (string.IsNullOrEmpty(uri) || webRequest == null)
-            { 
-                ServerLogger.LogMessage("Error building web request for user authentication. Yielding break.", ServerLogger.LogType.Error);
-                ValidateTokenFailed(conn, "Server Exception");
+                ServerLogger.LogError(e.Message);
+                ValidateTokenFailed(conn, "server exception");
                 yield break;
             }
 
@@ -116,129 +102,114 @@ namespace Runtime
 
             try
             {
-                if (webRequest.isNetworkError || webRequest.isHttpError || webRequest.responseCode != OkResponseCode)
+                if (webRequest.isNetworkError || webRequest.isHttpError)
                 {
-                    ValidateTokenFailed(conn, "Network or HTTP error occurred.");
+                    ServerLogger.LogError(webRequest.error);
+                    ValidateTokenFailed(conn, webRequest.error);
+                    yield break;
                 }
-                else
-                {
-                    HandleTokenValidation(conn, webRequest.downloadHandler.text, steamid, steamName);
-                }
+
+                ValidateToken(conn, webRequest.downloadHandler.text, steamid, steamName);
             }
             catch (Exception e)
             {
-                ServerLogger.LogMessage(e.Message, ServerLogger.LogType.Error);
-                ValidateTokenFailed(conn, "Server Exception");
+                ServerLogger.LogError(e.Message);
+                ValidateTokenFailed(conn, "server exception");
             }
         }
 
         private void FetchWebApiToken()
         {
-            string path = WebApiKeyPath;
-            StreamReader reader = new StreamReader(path);
+            const string path = PathRegister.Server_SteamWebApiKeyPath;
+            var reader = new StreamReader(path);
             _webAPIKey = reader.ReadToEnd();
             reader.Close();
         }
 
         private void FetchAppId()
         {
-            string path = SteamAppIdPath;
-            StreamReader reader = new StreamReader(path);
+            const string path = PathRegister.SteamAppIdPath;
+            var reader = new StreamReader(path);
             _appID = reader.ReadToEnd();
             reader.Close();
         }
 
-
-        private void HandleTokenValidation(NetworkConnection conn, string text, string steamId, string steamName)
+        private void ValidateToken(NetworkConnection conn, string text, string steamId, string steamName)
         {
             try
             {
-                var jObject = JObject.Parse(text);
-                var jToken = jObject["response"]?["params"];
+                var jToken = JObject.Parse(text)["response"]?["params"];
+                var authResponse = jToken?.ToObject<SteamAuthResponse>();
 
-                if (jToken != null)
+                if (authResponse == null ||
+                    authResponse.vacbanned ||
+                    authResponse.publisherbanned ||
+                    authResponse.result != "OK" ||
+                    authResponse.steamid != steamId)
                 {
-                    var authResponse = jToken.ToObject<SteamAuthResponse>();
-
-                    if (authResponse != null && (!authResponse.vacbanned || !authResponse.publisherbanned || authResponse.result != "OK" ||
-                                                 authResponse.steamid != steamId))
-                    {
-                        ValidateTokenSucceeded(conn, steamId, steamName);
-                        return;
-                    }
+                    ValidateTokenFailed(conn, "bad token");
+                    return;
                 }
+
+                StartCoroutine(FetchProfileAndAuthenticateAfterCoroutine(conn, steamId, steamName));
             }
             catch (Exception e)
             {
-                ServerLogger.LogMessage(e.Message, ServerLogger.LogType.Error);
+                ServerLogger.LogError(e.Message);
+                ValidateTokenFailed(conn, "server exception");
             }
-
-            ValidateTokenFailed(conn, "Authentication failed: " + text);
         }
 
-        private void ValidateTokenSucceeded(NetworkConnection conn, string steamId, string steamName)
+        private IEnumerator FetchProfileAndAuthenticateAfterCoroutine(NetworkConnection conn, string steamId, string steamName, bool recursiveCall = false)
         {
-            StartCoroutine(GetPlayerDataAndAuthenticate(conn, steamId, steamName));
-        }
-
-        private IEnumerator GetPlayerDataAndAuthenticate(NetworkConnection conn, string steamId, string steamName, bool recursiveCall = false)
-        {
-            ServerLogger.LogMessage("Fetching player data for " + steamId, ServerLogger.LogType.Info);
-            using (UnityWebRequest webRequest = UnityWebRequest.Get(EndpointRegister.GetServerFetchProfileUrl(steamId, ServerAuthenticator.Instance.authToken)))
+            using (UnityWebRequest webRequest =
+                UnityWebRequest.Get(EndpointRegister.GetServerFetchProfileUrl(steamId, ServerAuthenticator.Instance.serverAuthToken)))
             {
                 yield return webRequest.SendWebRequest();
 
-                if (webRequest.isNetworkError || webRequest.responseCode != 200)
+                if (webRequest.isNetworkError)
                 {
-                    //if error and unauthorized
+                    ServerLogger.LogError(webRequest.error);
+                    ValidateTokenFailed(conn, webRequest.error);
+                    yield break;
+                }
+
+                if (webRequest.isHttpError)
+                {
                     if (!recursiveCall)
                     {
-                        //get new token
-                        yield return StartCoroutine(ServerAuthenticator.Instance.GetAuthTokenRequest());
+                        yield return StartCoroutine(ServerAuthenticator.Instance.FetchAuthTokenCoroutine());
 
-                        //if token is null, the request failed
-                        if (ServerAuthenticator.Instance.authToken == null)
+                        if (ServerAuthenticator.Instance.serverAuthToken != null)
                         {
-                            ServerLogger.LogMessage("Error, auth token was null right after requesting.", ServerLogger.LogType.Error);
-                            ServerLogger.LogMessage("Aborting GetPlayerData call!", ServerLogger.LogType.Error);
-                            ValidateTokenFailed(conn, "Failed fetching player data from database.");
-                        }
-                        else //if token is not null, we can try again
-                        {
-                            StartCoroutine(GetPlayerDataAndAuthenticate(conn, steamId, steamName, true));
+                            StartCoroutine(FetchProfileAndAuthenticateAfterCoroutine(conn, steamId, steamName, true));
+                            yield break; //TODO: Error?
                         }
                     }
-                    else
-                    {
-                        ServerLogger.LogMessage("Error while trying to get player data: " + webRequest.error + webRequest.downloadHandler.text,
-                            ServerLogger.LogType.Error);
-                        ServerLogger.LogMessage("Aborting GetPlayerData call!", ServerLogger.LogType.Error);
-                        ValidateTokenFailed(conn, "Failed fetching player data from database.");
-                    }
+                    ValidateTokenFailed(conn, "Server failed fetching profile from database.");
+                    yield break;
+                }
+                
+                var profile = JsonConvert.DeserializeObject<Profile>(webRequest.downloadHandler.text);
+                profile.name = steamName;
+                ValidateTokenSucceeded(conn, profile);
 
-                }
-                else
-                {
-                    ServerLogger.LogMessage("Successfully fetched player data for " + steamId, ServerLogger.LogType.Success);
-                    ServerLogger.LogMessage("Data:" + webRequest.downloadHandler.text, ServerLogger.LogType.Success);
-                    var playerData = JsonConvert.DeserializeObject<Profile>(webRequest.downloadHandler.text);
-                    playerData.name = steamName;
-                    ProfileService.Instance.ConnectionInfos.Add(conn, playerData);
-                    AuthResponseMessage authResponseMessage = new AuthResponseMessage();
-                    conn.Send(authResponseMessage);
-                    OnServerAuthenticated.Invoke(conn);
-                }
             }
+        }
+
+        private void ValidateTokenSucceeded(NetworkConnection conn, Profile profile)
+        {
+            ProfileService.Instance.ConnectionInfos.Add(conn, profile);
+            conn.Send(new AuthResponseMessage());
+            OnServerAuthenticated.Invoke(conn);
         }
 
         private void ValidateTokenFailed(NetworkConnection conn, string reason)
         {
-            AuthResponseMessage authResponseMessage =
-                new AuthResponseMessage()
-                {
-                    FailReason = reason
-                };
-            conn.Send(authResponseMessage);
+            conn.Send(new AuthResponseMessage()
+            {
+                FailReason = reason
+            });
         }
 #endif
 
@@ -267,7 +238,7 @@ namespace Runtime
             }
         }
 #endif
-    
+
         #endregion
     }
 }

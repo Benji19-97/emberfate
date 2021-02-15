@@ -7,6 +7,7 @@ using Mirror;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Runtime.Endpoints;
+using Runtime.Helpers;
 using Runtime.Models;
 using Runtime.UI;
 using UnityEngine;
@@ -130,7 +131,7 @@ namespace Runtime
 
         private IEnumerator FetchCharacters()
         {
-            NotificationSystem.Instance.PushNotification("Retrieving characters ...", false);
+            NotificationSystem.Instance.Push("Retrieving characters ...", false);
 
             using (UnityWebRequest webRequest =
                 UnityWebRequest.Get(EndpointRegister.GetClientFetchAllCharactersUrl(Steamworks.SteamUser.GetSteamID().m_SteamID.ToString(),
@@ -140,11 +141,11 @@ namespace Runtime
 
                 if (webRequest.isNetworkError || webRequest.responseCode != 200)
                 {
-                    NotificationSystem.Instance.PushNotification("Couldn't retrieve character list. Network Error: " + webRequest.error, true);
+                    NotificationSystem.Instance.Push("Couldn't retrieve character list. Network Error: " + webRequest.error, true);
                 }
                 else
                 {
-                    NotificationSystem.Instance.PushNotification("Retrieved characters from Game Server.", true);
+                    NotificationSystem.Instance.Push("Retrieved characters from Game Server.", true);
 
                     var jArray = JArray.Parse(webRequest.downloadHandler.text);
 
@@ -167,23 +168,22 @@ namespace Runtime
 #if UNITY_SERVER || UNITY_EDITOR
 
             using (UnityWebRequest webRequest =
-                UnityWebRequest.Get(EndpointRegister.GetServerFetchCharacterUrl(characterId, ServerAuthenticator.Instance.authToken)))
+                UnityWebRequest.Get(EndpointRegister.GetServerFetchCharacterUrl(characterId, ServerAuthenticator.Instance.serverAuthToken)))
             {
                 yield return webRequest.SendWebRequest();
 
 
                 if (webRequest.isNetworkError || webRequest.responseCode != 200)
                 {
-                    ServerLogger.LogMessage("was error", ServerLogger.LogType.Message);
 
 
                     //if error and unauthorized
                     if (!recursiveCall)
                     {
                         //get new token
-                        yield return StartCoroutine(ServerAuthenticator.Instance.GetAuthTokenRequest());
+                        yield return StartCoroutine(ServerAuthenticator.Instance.FetchAuthTokenCoroutine());
 
-                        if (ServerAuthenticator.Instance.authToken != null)
+                        if (ServerAuthenticator.Instance.serverAuthToken != null)
                         {
                             StartCoroutine(ServerFetchCharacter(conn, characterId, true));
                         }
@@ -191,7 +191,6 @@ namespace Runtime
                 }
                 else
                 {
-                    ServerLogger.LogMessage("was success", ServerLogger.LogType.Message);
 
                     ProfileService.Instance.ConnectionInfos[conn].PlayingCharacter = Character.Deserialize(webRequest.downloadHandler.text);
                 }
@@ -207,13 +206,13 @@ namespace Runtime
 
         public void SendCharacterCreationRequest(string characterName, string characterClass)
         {
-            NotificationSystem.Instance.PushNotification("Creating character ...", false);
+            NotificationSystem.Instance.Push("Creating character ...", false);
             NetworkClient.Send(new CharacterCreationRequest()
             {
                 Name = characterName,
                 Class = characterClass
             });
-            NotificationSystem.Instance.PushNotification("Sent character create request,  " + characterName + " " + characterClass, false);
+            NotificationSystem.Instance.Push("Sent character create request,  " + characterName + " " + characterClass, false);
         }
 
         private void OnCharacterCreationRequest(NetworkConnection conn, CharacterCreationRequest msg)
@@ -270,7 +269,7 @@ namespace Runtime
             using (UnityWebRequest webRequest =
                 new UnityWebRequest(
                     EndpointRegister.GetServerCreateCharacterUrl(data.name, ProfileService.Instance.ConnectionInfos[conn].steamId,
-                        ServerAuthenticator.Instance.authToken),
+                        ServerAuthenticator.Instance.serverAuthToken),
                     "POST"))
             {
                 webRequest.uploadHandler = new UploadHandlerRaw(data.Serialize());
@@ -284,13 +283,11 @@ namespace Runtime
                     if (!recursiveCall)
                     {
                         //get new token
-                        yield return StartCoroutine(ServerAuthenticator.Instance.GetAuthTokenRequest());
+                        yield return StartCoroutine(ServerAuthenticator.Instance.FetchAuthTokenCoroutine());
 
                         //if token is null, the token request failed
-                        if (ServerAuthenticator.Instance.authToken == null)
+                        if (ServerAuthenticator.Instance.serverAuthToken == null)
                         {
-                            ServerLogger.LogMessage("Error, auth token was null right after requesting.", ServerLogger.LogType.Error);
-                            ServerLogger.LogMessage("Aborting PostNewCharacter call!", ServerLogger.LogType.Error);
                             conn.Send(new CharacterCreationResponse()
                             {
                                 Code = ResponseCodeError,
@@ -299,15 +296,12 @@ namespace Runtime
                         }
                         else //if token is not null, we can try again to post status
                         {
-                            ServerLogger.LogMessage("Trying again to create character", ServerLogger.LogType.Info);
                             StartCoroutine(PostNewCharacter(conn, data, true));
                         }
                     }
                     else
                     {
-                        ServerLogger.LogMessage("Error while trying to create character data " + webRequest.error + webRequest.downloadHandler.text,
-                            ServerLogger.LogType.Error);
-                        ServerLogger.LogMessage("Aborting PostNewCharacter call!", ServerLogger.LogType.Error);
+
                         conn.Send(new CharacterCreationResponse()
                         {
                             Code = ResponseCodeError,
@@ -317,14 +311,13 @@ namespace Runtime
                 }
                 else
                 {
-                    ServerLogger.LogMessage("Successfully created new character.", ServerLogger.LogType.Success);
                     conn.Send(new CharacterCreationResponse()
                     {
                         Code = ResponseCodeOk,
                         Message = data.name
                     });
 
-                    StartCoroutine(ProfileService.Instance.GetProfile(conn, ProfileService.Instance.ConnectionInfos[conn].steamId));
+                    StartCoroutine(ProfileService.Instance.FetchProfileCoroutine(conn, ProfileService.Instance.ConnectionInfos[conn].steamId));
                 }
             }
 #else
@@ -336,12 +329,12 @@ namespace Runtime
         {
             if (msg.Code == ResponseCodeOk)
             {
-                NotificationSystem.Instance.PushNotification("Successfully created character: " + msg.Message, true);
+                NotificationSystem.Instance.Push("Successfully created character: " + msg.Message, true);
                 GetCharactersFromDatabase();
             }
             else
             {
-                NotificationSystem.Instance.PushNotification("Failed to create character: " + msg.Message, true);
+                NotificationSystem.Instance.Push("Failed to create character: " + msg.Message, true);
             }
 
             characterCreationAnswer.Invoke();
@@ -353,12 +346,12 @@ namespace Runtime
 
         public void SendCharacterDeletionRequest(string characterId)
         {
-            NotificationSystem.Instance.PushNotification("Deleting character ...", false);
+            NotificationSystem.Instance.Push("Deleting character ...", false);
             NetworkClient.Send(new CharacterDeletionRequest()
             {
                 CharacterId = characterId
             });
-            NotificationSystem.Instance.PushNotification("Sent character delete request for " + characterId, false);
+            NotificationSystem.Instance.Push("Sent character delete request for " + characterId, false);
         }
 
         private void OnCharacterDeletionRequest(NetworkConnection conn, CharacterDeletionRequest msg)
@@ -389,7 +382,7 @@ namespace Runtime
 #if UNITY_SERVER || UNITY_EDITOR
 
             using (UnityWebRequest webRequest = UnityWebRequest.Delete(
-                EndpointRegister.GetServerDeleteCharacterUrl(characterId, ServerAuthenticator.Instance.authToken)
+                EndpointRegister.GetServerDeleteCharacterUrl(characterId, ServerAuthenticator.Instance.serverAuthToken)
             ))
             {
                 yield return webRequest.SendWebRequest();
@@ -400,13 +393,12 @@ namespace Runtime
                     if (!recursiveCall)
                     {
                         //get new token
-                        yield return StartCoroutine(ServerAuthenticator.Instance.GetAuthTokenRequest());
+                        yield return StartCoroutine(ServerAuthenticator.Instance.FetchAuthTokenCoroutine());
 
                         //if token is null, the token request failed
-                        if (ServerAuthenticator.Instance.authToken == null)
+                        if (ServerAuthenticator.Instance.serverAuthToken == null)
                         {
-                            ServerLogger.LogMessage("Error, auth token was null right after requesting.", ServerLogger.LogType.Error);
-                            ServerLogger.LogMessage("Aborting DeleteCharacter call!", ServerLogger.LogType.Error);
+
                             conn.Send(new CharacterCreationResponse()
                             {
                                 Code = ResponseCodeError,
@@ -415,15 +407,12 @@ namespace Runtime
                         }
                         else //if token is not null, we can try again to post status
                         {
-                            ServerLogger.LogMessage("Trying again to delete character.", ServerLogger.LogType.Info);
                             StartCoroutine(DeleteCharacter(conn, characterId, true));
                         }
                     }
                     else
                     {
-                        ServerLogger.LogMessage("Error while trying to delete character " + webRequest.error + webRequest.downloadHandler.text,
-                            ServerLogger.LogType.Error);
-                        ServerLogger.LogMessage("Aborting DeleteCharacter call!", ServerLogger.LogType.Error);
+
                         conn.Send(new CharacterDeletionResponse()
                         {
                             Code = ResponseCodeError,
@@ -433,14 +422,13 @@ namespace Runtime
                 }
                 else
                 {
-                    ServerLogger.LogMessage("Successfully deleted character.", ServerLogger.LogType.Success);
                     conn.Send(new CharacterCreationResponse()
                     {
                         Code = ResponseCodeOk,
                         Message = characterId
                     });
 
-                    StartCoroutine(ProfileService.Instance.GetProfile(conn, ProfileService.Instance.ConnectionInfos[conn].steamId));
+                    StartCoroutine(ProfileService.Instance.FetchProfileCoroutine(conn, ProfileService.Instance.ConnectionInfos[conn].steamId));
                 }
             }
 #else
@@ -452,12 +440,12 @@ namespace Runtime
         {
             if (msg.Code == ResponseCodeOk)
             {
-                NotificationSystem.Instance.PushNotification("Successfully deleted character: " + msg.Message, true);
+                NotificationSystem.Instance.Push("Successfully deleted character: " + msg.Message, true);
                 GetCharactersFromDatabase();
             }
             else
             {
-                NotificationSystem.Instance.PushNotification("Failed to delete character: " + msg.Message, true);
+                NotificationSystem.Instance.Push("Failed to delete character: " + msg.Message, true);
             }
         }
 
@@ -471,14 +459,13 @@ namespace Runtime
             {
                 CharacterId = characterId
             });
-            NotificationSystem.Instance.PushNotification("Sent character play request for " + characterId, false);
+            NotificationSystem.Instance.Push("Sent character play request for " + characterId, false);
         }
 
         private void OnCharacterPlayRequest(NetworkConnection conn, CharacterPlayRequest msg)
         {
 #if UNITY_SERVER || UNITY_EDITOR
 
-            ServerLogger.LogMessage(conn + " wants to play character " + msg.CharacterId, ServerLogger.LogType.Info);
 
             if (ProfileService.Instance.ConnectionInfos[conn].PlayingCharacter != null)
             {
@@ -491,22 +478,18 @@ namespace Runtime
 
             try
             {
-                ServerLogger.LogMessage("Looking for this id: " + msg.CharacterId, ServerLogger.LogType.Info);
 
                 foreach (var characterInfo in ProfileService.Instance.ConnectionInfos[conn].characters)
                 {
-                    ServerLogger.LogMessage(characterInfo.characterId + " = " + characterInfo.characterName, ServerLogger.LogType.Info);
 
                     if (characterInfo.characterId == msg.CharacterId)
                     {
-                        ServerLogger.LogMessage("Found character!", ServerLogger.LogType.Info);
                         StartCoroutine(LoadCharacterForPlayer(conn, msg.CharacterId));
                     }
                 }
             }
             catch (Exception e)
             {
-                ServerLogger.LogMessage(e.Message, ServerLogger.LogType.Error);
             }
 #endif
         }
@@ -514,10 +497,8 @@ namespace Runtime
         private IEnumerator LoadCharacterForPlayer(NetworkConnection conn, string characterId)
         {
 #if UNITY_SERVER || UNITY_EDITOR
-            ServerLogger.LogMessage("Started LoadCharacterForPlayer coroutine", ServerLogger.LogType.Message);
             yield return StartCoroutine(ServerFetchCharacter(conn, characterId));
 
-            ServerLogger.LogMessage("Ended LoadCharacterForPlayer coroutine", ServerLogger.LogType.Message);
 
 
             if (ProfileService.Instance.ConnectionInfos[conn].PlayingCharacter == null)

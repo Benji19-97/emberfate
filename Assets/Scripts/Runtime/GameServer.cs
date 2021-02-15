@@ -4,6 +4,7 @@ using JetBrains.Annotations;
 using kcp2k;
 using Mirror;
 using Newtonsoft.Json;
+using Runtime.Endpoints;
 using Runtime.Models;
 using UnityEngine;
 
@@ -21,7 +22,7 @@ namespace Runtime
 
         public static GameServer Instance { get; private set; }
 
-        private const string ServerConfigPath = "data/config.json";
+        
 
         public ServerConfig Config { get; private set; }
 
@@ -45,7 +46,7 @@ namespace Runtime
                 return;
             }
 
-            string path = ServerConfigPath;
+            string path = PathRegister.Server_ConfigPath;
             StreamReader reader = new StreamReader(path);
             string json = reader.ReadToEnd();
             reader.Close();

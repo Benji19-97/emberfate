@@ -45,19 +45,19 @@ namespace Runtime
 #if UNITY_SERVER
             return;
 #endif
-            NotificationSystem.Instance.PushNotification("Initializing Steam ...", false);
+            NotificationSystem.Instance.Push("Initializing Steam ...", false);
             if (SteamManager.Initialized)
             {
                 string personaName = SteamFriends.GetPersonaName();
 
-                NotificationSystem.Instance.PushNotification("Successfully initialized Steam. Welcome " + personaName + "!", true);
+                NotificationSystem.Instance.Push("Successfully initialized Steam. Welcome " + personaName + "!", true);
                 mainMenuCanvas.SetActive(true); //TODO: Game manager that handles things like this with the event below?
                 initializedSteam.Invoke();
             }
             else
             {
 #if UNITY_EDITOR
-                NotificationSystem.Instance.PushNotification("Couldn't initialize Steam. Are you sure Steam is open?", true);
+                NotificationSystem.Instance.Push("Couldn't initialize Steam. Are you sure Steam is open?", true);
                 // UnityEditor.EditorApplication.isPlaying = false;
                 return;
 #endif

@@ -4,7 +4,9 @@ using System.Collections.Generic;
 using Mirror;
 using Newtonsoft.Json;
 using Runtime.Endpoints;
+using Runtime.Helpers;
 using Runtime.Models;
+using Runtime.Utils;
 using UnityEngine;
 using UnityEngine.Networking;
 
@@ -15,6 +17,7 @@ namespace Runtime
         public static ProfileService Instance;
         public Dictionary<NetworkConnection, Profile> ConnectionInfos = new Dictionary<NetworkConnection, Profile>();
 
+        #region Unity Event functions
 
         private void Awake()
         {
@@ -29,113 +32,83 @@ namespace Runtime
             }
         }
 
-        public IEnumerator GetProfile(NetworkConnection conn, string steamId, bool recursiveCall = false)
+        #endregion
+
+        [Server]
+        public IEnumerator FetchProfileCoroutine(NetworkConnection conn, string steamId, bool recursiveCall = false)
         {
-#if UNITY_SERVER || UNITY_EDITOR
-            ServerLogger.LogMessage("Fetching profile data for " + steamId, ServerLogger.LogType.Info);
-
-
-            using (UnityWebRequest webRequest = UnityWebRequest.Get(EndpointRegister.GetServerFetchProfileUrl(steamId, ServerAuthenticator.Instance.authToken)))
+            using (UnityWebRequest webRequest = UnityWebRequest.Get(EndpointRegister.GetServerFetchProfileUrl(steamId, ServerAuthenticator.Instance.serverAuthToken)))
             {
                 yield return webRequest.SendWebRequest();
 
-                if (webRequest.isNetworkError || webRequest.responseCode != 200)
+                if (webRequest.isNetworkError)
                 {
-                    //if error and unauthorized
+                    ServerLogger.LogError(webRequest.error);
+                    yield break;
+                }
+
+                if (webRequest.isHttpError)
+                {
                     if (!recursiveCall)
                     {
-                        //get new token
-                        yield return StartCoroutine(ServerAuthenticator.Instance.GetAuthTokenRequest());
+                        yield return StartCoroutine(ServerAuthenticator.Instance.FetchAuthTokenCoroutine());
 
-                        //if token is null, the request failed
-                        if (ServerAuthenticator.Instance.authToken == null)
+                        if (ServerAuthenticator.Instance.serverAuthToken != null)
                         {
-                            ServerLogger.LogMessage("Error, auth token was null right after requesting.", ServerLogger.LogType.Error);
-                            ServerLogger.LogMessage("Aborting GetPlayerData call!", ServerLogger.LogType.Error);
+                            StartCoroutine(FetchProfileCoroutine(conn, steamId, true));
                         }
-                        else //if token is not null, we can try again
-                        {
-                            StartCoroutine(GetProfile(conn, steamId, true));
-                        }
-                    }
-                    else
-                    {
-                        ServerLogger.LogMessage("Error while trying to get player data: " + webRequest.error + webRequest.downloadHandler.text,
-                            ServerLogger.LogType.Error);
-                        ServerLogger.LogMessage("Aborting GetPlayerData call!", ServerLogger.LogType.Error);
                     }
                 }
                 else
                 {
-                    ServerLogger.LogMessage("Successfully fetched player data for " + steamId, ServerLogger.LogType.Success);
-                    ServerLogger.LogMessage("Data:" + webRequest.downloadHandler.text, ServerLogger.LogType.Success);
-                    var playerData = JsonConvert.DeserializeObject<Profile>(webRequest.downloadHandler.text);
-                    ConnectionInfos[conn] = playerData;
+                    try
+                    {
+                        ConnectionInfos[conn] = JsonConvert.DeserializeObject<Profile>(webRequest.downloadHandler.text);
+                    }
+                    catch (Exception e)
+                    {
+                        ServerLogger.LogError(e.Message);
+                        throw;
+                    }
                 }
             }
-#else
-            yield break;
-#endif
         }
 
-        public IEnumerator PushProfile(NetworkConnection connKey, bool removeAfter = false, bool recursiveCall = false)
+        [Server]
+        public IEnumerator UpsertProfileCoroutine(NetworkConnection connKey, bool removeAfter = false, bool recursiveCall = false)
         {
-#if UNITY_SERVER || UNITY_EDITOR
-            ServerLogger.LogMessage("Pushing profile to database...", ServerLogger.LogType.Info);
-            var postDataJson = JsonConvert.SerializeObject(ConnectionInfos[connKey]);
-            ServerLogger.LogMessage("Sending this JSON: " + postDataJson, ServerLogger.LogType.Info);
-
-            using (UnityWebRequest webRequest =
-                new UnityWebRequest(EndpointRegister.GetServerUpsertProfileUrl(ConnectionInfos[connKey].steamId, ServerAuthenticator.Instance.authToken),
-                    "POST"))
+            var attachedJson = JsonConvert.SerializeObject(ConnectionInfos[connKey]);
+            using (UnityWebRequest webRequest = WebRequestHelper.GetPostRequest(
+                EndpointRegister.GetServerUpsertProfileUrl(ConnectionInfos[connKey].steamId, ServerAuthenticator.Instance.serverAuthToken), attachedJson))
             {
-                byte[] jsonToSend = new System.Text.UTF8Encoding().GetBytes(postDataJson);
-                webRequest.uploadHandler = new UploadHandlerRaw(jsonToSend);
-                webRequest.downloadHandler = new DownloadHandlerBuffer();
-                webRequest.SetRequestHeader("Content-Type", "application/json");
-
                 yield return webRequest.SendWebRequest();
 
-                if (webRequest.isNetworkError || webRequest.responseCode != 200)
+                if (webRequest.isNetworkError)
                 {
-                    //if error and unauthorized
+                    ServerLogger.LogError(webRequest.error);
+                    yield break;
+                }
+
+                if (webRequest.isHttpError)
+                {
                     if (!recursiveCall)
                     {
-                        //get new token
-                        yield return StartCoroutine(ServerAuthenticator.Instance.GetAuthTokenRequest());
+                        yield return StartCoroutine(ServerAuthenticator.Instance.FetchAuthTokenCoroutine());
 
-                        //if token is null, the token request failed
-                        if (ServerAuthenticator.Instance.authToken == null)
+                        if (ServerAuthenticator.Instance.serverAuthToken != null)
                         {
-                            ServerLogger.LogMessage("Error, auth token was null right after requesting.", ServerLogger.LogType.Error);
-                            ServerLogger.LogMessage("Aborting PushProfile call!", ServerLogger.LogType.Error);
+                            StartCoroutine(UpsertProfileCoroutine(connKey, removeAfter, true));
                         }
-                        else //if token is not null, we can try again to post status
-                        {
-                            ServerLogger.LogMessage("Trying again to update server status on API.", ServerLogger.LogType.Info);
-                            StartCoroutine(PushProfile(connKey, removeAfter, true));
-                        }
-                    }
-                    else
-                    {
-                        ServerLogger.LogMessage("Error while trying to push player data " + webRequest.error + webRequest.downloadHandler.text,
-                            ServerLogger.LogType.Error);
-                        ServerLogger.LogMessage("Aborting PushProfile call!", ServerLogger.LogType.Error);
                     }
                 }
                 else
                 {
-                    ServerLogger.LogMessage("Successfully pushed player data to database.", ServerLogger.LogType.Success);
                     if (removeAfter)
                     {
                         ConnectionInfos.Remove(connKey);
-                        ServerLogger.LogMessage("Removed " + connKey, ServerLogger.LogType.Info);
                     }
                 }
             }
-#else
-            yield break;
-#endif
         }
     }
 }

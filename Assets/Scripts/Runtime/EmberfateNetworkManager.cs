@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using FirstGearGames.FlexSceneManager;
 using FirstGearGames.FlexSceneManager.LoadUnloadDatas;
 using Mirror;
+using Runtime.Helpers;
 using Runtime.Models;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -55,24 +56,20 @@ namespace Runtime
         public override void OnServerConnect(NetworkConnection conn)
         {
             FlexSceneManager.OnServerConnect(conn);
-            ServerLogger.LogMessage(conn + " connected.", ServerLogger.LogType.Info);
+            ServerLogger.Log(conn + " connected");
         }
 
         public override void OnServerDisconnect(NetworkConnection conn)
         {
             FlexSceneManager.OnServerDisconnect(conn);
-
-            if (ProfileService.Instance.ConnectionInfos.ContainsKey(conn))
-            {
-                //StartCoroutine(ProfileService.Instance.PushProfile(conn, true));
-                ProfileService.Instance.ConnectionInfos.Remove(conn);
-                ServerLogger.LogMessage( conn  + "  disconnected", ServerLogger.LogType.Success);
-            }
+            StartCoroutine(ProfileService.Instance.UpsertProfileCoroutine(conn, true));
+            ProfileService.Instance.ConnectionInfos.Remove(conn);
+            ServerLogger.Log(conn + " disconnected");
         }
 
         public override void OnStopServer()
         {
-            ServerLogger.LogMessage("Stopping server...", ServerLogger.LogType.Info);
+            ServerLogger.LogWarning("Stopping server...");
 #if UNITY_SERVER
             GameServer.Instance.OnStopServer();
 #endif
@@ -87,7 +84,7 @@ namespace Runtime
         public override void OnStartServer()
         {
 #if UNITY_SERVER
-             ServerLogger.LogMessage(
+             ServerLogger.Log(
                 $"Started server {GameServer.Instance.Config.name}[{GameServer.Instance.Config.location}] " +
                 $"on {GameServer.Instance.Config.ip}:{GameServer.Instance.Config.port} " +
                 $"with {GameServer.Instance.Config.maxConnections} maximum connections.",
