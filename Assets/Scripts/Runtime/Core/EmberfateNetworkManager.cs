@@ -1,18 +1,20 @@
 ﻿using System;
-using System.Collections.Generic;
 using FirstGearGames.FlexSceneManager;
-using FirstGearGames.FlexSceneManager.LoadUnloadDatas;
 using Mirror;
+using Runtime.Core.Server;
 using Runtime.Helpers;
-using Runtime.Models;
+using Runtime.Services;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
-namespace Runtime
+namespace Runtime.Core
 {
     public class EmberfateNetworkManager : NetworkManager
     {
         public static EmberfateNetworkManager Instance;
+
+
+        [Header("UI")] [SerializeField] private GameObject loginMenu;
+        [SerializeField] private GameObject characterSelectionMenu;
 
         public override void Awake()
         {
@@ -29,9 +31,9 @@ namespace Runtime
             base.Awake();
         }
 
-
-        [Header("UI")] [SerializeField] private GameObject loginMenu;
-        [SerializeField] private GameObject characterSelectionMenu;
+        public override void OnApplicationQuit()
+        {
+        }
 
         private void OnServerInitialized()
         {
@@ -80,10 +82,6 @@ namespace Runtime
                 $"on {GameServer.Instance.Config.ip}:{GameServer.Instance.Config.port} " +
                 $"with {GameServer.Instance.Config.maxConnections} maximum connections.");
 #endif
-        }
-
-        public override void OnApplicationQuit()
-        {
         }
     }
 }

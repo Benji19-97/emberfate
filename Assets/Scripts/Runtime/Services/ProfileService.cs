@@ -3,14 +3,13 @@ using System.Collections;
 using System.Collections.Generic;
 using Mirror;
 using Newtonsoft.Json;
-using Runtime.Endpoints;
 using Runtime.Helpers;
 using Runtime.Models;
-using Runtime.Utils;
+using Runtime.Registers;
 using UnityEngine;
 using UnityEngine.Networking;
 
-namespace Runtime
+namespace Runtime.Services
 {
     public class ProfileService : MonoBehaviour
     {
@@ -37,7 +36,8 @@ namespace Runtime
         [Server]
         public IEnumerator FetchProfileCoroutine(NetworkConnection conn, string steamId, bool recursiveCall = false)
         {
-            using (UnityWebRequest webRequest = UnityWebRequest.Get(EndpointRegister.GetServerFetchProfileUrl(steamId, ServerAuthenticationService.Instance.serverAuthToken)))
+            using (var webRequest =
+                UnityWebRequest.Get(EndpointRegister.GetServerFetchProfileUrl(steamId, ServerAuthenticationService.Instance.serverAuthToken)))
             {
                 yield return webRequest.SendWebRequest();
 
@@ -53,10 +53,7 @@ namespace Runtime
                     {
                         yield return StartCoroutine(ServerAuthenticationService.Instance.FetchAuthTokenCoroutine());
 
-                        if (ServerAuthenticationService.Instance.serverAuthToken != null)
-                        {
-                            StartCoroutine(FetchProfileCoroutine(conn, steamId, true));
-                        }
+                        if (ServerAuthenticationService.Instance.serverAuthToken != null) StartCoroutine(FetchProfileCoroutine(conn, steamId, true));
                     }
                 }
                 else
@@ -78,8 +75,9 @@ namespace Runtime
         public IEnumerator UpsertProfileCoroutine(NetworkConnection connKey, bool removeAfter = false, bool recursiveCall = false)
         {
             var attachedJson = JsonConvert.SerializeObject(ConnectionInfos[connKey]);
-            using (UnityWebRequest webRequest = WebRequestHelper.GetPostRequest(
-                EndpointRegister.GetServerUpsertProfileUrl(ConnectionInfos[connKey].steamId, ServerAuthenticationService.Instance.serverAuthToken), attachedJson))
+            using (var webRequest = WebRequestHelper.GetPostRequest(
+                EndpointRegister.GetServerUpsertProfileUrl(ConnectionInfos[connKey].steamId, ServerAuthenticationService.Instance.serverAuthToken),
+                attachedJson))
             {
                 yield return webRequest.SendWebRequest();
 
@@ -95,18 +93,12 @@ namespace Runtime
                     {
                         yield return StartCoroutine(ServerAuthenticationService.Instance.FetchAuthTokenCoroutine());
 
-                        if (ServerAuthenticationService.Instance.serverAuthToken != null)
-                        {
-                            StartCoroutine(UpsertProfileCoroutine(connKey, removeAfter, true));
-                        }
+                        if (ServerAuthenticationService.Instance.serverAuthToken != null) StartCoroutine(UpsertProfileCoroutine(connKey, removeAfter, true));
                     }
                 }
                 else
                 {
-                    if (removeAfter)
-                    {
-                        ConnectionInfos.Remove(connKey);
-                    }
+                    if (removeAfter) ConnectionInfos.Remove(connKey);
                 }
             }
         }

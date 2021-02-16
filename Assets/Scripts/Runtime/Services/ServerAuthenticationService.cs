@@ -1,14 +1,12 @@
-﻿using System;
-using System.Collections;
+﻿using System.Collections;
 using System.IO;
 using Newtonsoft.Json;
-using Runtime.Endpoints;
+using Runtime.Core.Server;
 using Runtime.Helpers;
-using Runtime.Utils;
+using Runtime.Registers;
 using UnityEngine;
-using UnityEngine.Networking;
 
-namespace Runtime
+namespace Runtime.Services
 {
     public class ServerAuthenticationService : MonoBehaviour
     {
@@ -21,10 +19,7 @@ namespace Runtime
         private void Awake()
         {
 #if UNITY_EDITOR
-            if (!GameServer.START_SERVER_IN_UNITY_EDITOR)
-            {
-                Destroy(gameObject);
-            }
+            if (!GameServer.START_SERVER_IN_UNITY_EDITOR) Destroy(gameObject);
 #endif
             if (Instance == null)
             {
@@ -43,11 +38,11 @@ namespace Runtime
         {
             var attachedJson = JsonConvert.SerializeObject(new
             {
-                name = GameServer.Instance.Config.name,
+                GameServer.Instance.Config.name,
                 password = ReadServerPassword()
             });
 
-            using (UnityWebRequest webRequest = WebRequestHelper.GetPostRequest(EndpointRegister.GetServerFetchAuthTokenUrl(), attachedJson))
+            using (var webRequest = WebRequestHelper.GetPostRequest(EndpointRegister.GetServerFetchAuthTokenUrl(), attachedJson))
             {
                 yield return webRequest.SendWebRequest();
 

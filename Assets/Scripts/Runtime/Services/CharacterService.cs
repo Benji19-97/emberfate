@@ -4,41 +4,42 @@ using System.Linq;
 using FirstGearGames.FlexSceneManager;
 using FirstGearGames.FlexSceneManager.LoadUnloadDatas;
 using Mirror;
-using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using Runtime.Endpoints;
+using Runtime.Core;
+using Runtime.Core.Server;
 using Runtime.Helpers;
 using Runtime.Models;
+using Runtime.Registers;
 using Runtime.UI;
+using Steamworks;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.Networking;
-using CharacterInfo = Runtime.Models.CharacterInfo;
+using GameServer = Runtime.Core.Server.GameServer;
 
-namespace Runtime
+namespace Runtime.Services
 {
     public class CharacterService : MonoBehaviour
     {
+        private const short ResponseCodeOk = 200;
+        private const short ResponseCodeError = 401;
         public static CharacterService Instance;
 
         public UnityEvent characterListChanged;
         public UnityEvent characterCreationAnswer;
-        
-        public Character[] characters;
 
-        private const short ResponseCodeOk = 200;
-        private const short ResponseCodeError = 401;
+        public Character[] characters;
 
 
         [Header("Scenes")] [Scene] [SerializeField]
         private string townHubScene;
-        
+
         #region NetworkMessages
 
         public struct CharacterCreationRequest : NetworkMessage
         {
             public string Name;
-            public string @Class;
+            public string Class;
         }
 
         public struct CharacterCreationResponse : NetworkMessage
@@ -94,10 +95,7 @@ namespace Runtime
 #endif
 #if UNITY_EDITOR
 
-            if (GameServer.START_SERVER_IN_UNITY_EDITOR)
-            {
-                RegisterServerHandlers();
-            }
+            if (GameServer.START_SERVER_IN_UNITY_EDITOR) RegisterServerHandlers();
 #endif
         }
 
@@ -134,27 +132,21 @@ namespace Runtime
         {
             NotificationSystem.Push("Retrieving characters ...", false);
 
-            using (UnityWebRequest webRequest =
-                UnityWebRequest.Get(EndpointRegister.GetClientFetchAllCharactersUrl(Steamworks.SteamUser.GetSteamID().m_SteamID.ToString(),
+            using (var webRequest =
+                UnityWebRequest.Get(EndpointRegister.GetClientFetchAllCharactersUrl(SteamUser.GetSteamID().m_SteamID.ToString(),
                     SteamTokenAuthenticator.AuthTicket)))
             {
                 yield return webRequest.SendWebRequest();
 
                 if (webRequest.isNetworkError || webRequest.responseCode != 200)
-                {
                     NotificationSystem.Push("Couldn't retrieve character list. Network Error: " + webRequest.error, true);
-                }
                 else
-                {
                     try
                     {
                         NotificationSystem.Push("Retrieved characters from Game Server.", true);
                         var jArray = JArray.Parse(webRequest.downloadHandler.text);
                         var newCharacters = new Character[jArray.Count];
-                        for (int i = 0; i < jArray.Count; i++)
-                        {
-                            newCharacters[i] = Character.Deserialize(jArray[i].ToString());
-                        }
+                        for (var i = 0; i < jArray.Count; i++) newCharacters[i] = Character.Deserialize(jArray[i].ToString());
 
                         characters = newCharacters;
                         characterListChanged.Invoke();
@@ -164,13 +156,15 @@ namespace Runtime
                         NotificationSystem.Push(e.Message, false);
                         throw;
                     }
-                }
             }
         }
 
 #if UNITY_SERVER || UNITY_EDITOR
 
-        /// <summary>Server sends web request, fetching a character. After receiving character, server sets profiles 'PlayingCharacter' to fetched character.</summary>
+        /// <summary>
+        ///     Server sends web request, fetching a character. After receiving character, server sets profiles
+        ///     'PlayingCharacter' to fetched character.
+        /// </summary>
         private IEnumerator ServerFetchCharacterCoroutine(NetworkConnection conn, string characterId, bool recursiveCall = false)
         {
             using (var webRequest =
@@ -191,9 +185,7 @@ namespace Runtime
                         yield return StartCoroutine(ServerAuthenticationService.Instance.FetchAuthTokenCoroutine());
 
                         if (ServerAuthenticationService.Instance.serverAuthToken != null)
-                        {
                             StartCoroutine(ServerFetchCharacterCoroutine(conn, characterId, true));
-                        }
                     }
                 }
                 else
@@ -211,7 +203,7 @@ namespace Runtime
         public void SendCharacterCreationRequest(string characterName, string characterClass)
         {
             NotificationSystem.Push("Creating character ...", false);
-            NetworkClient.Send(new CharacterCreationRequest()
+            NetworkClient.Send(new CharacterCreationRequest
             {
                 Name = characterName,
                 Class = characterClass
@@ -224,17 +216,15 @@ namespace Runtime
         private void OnCharacterCreationRequest(NetworkConnection conn, CharacterCreationRequest msg)
         {
             if (ProfileService.Instance.ConnectionInfos[conn].PlayingCharacter != null)
-            {
-                conn.Send(new CharacterCreationResponse()
+                conn.Send(new CharacterCreationResponse
                 {
                     Code = 403,
                     Message = "You cannot perform this operation while playing a character."
                 });
-            }
 
             var profile = ProfileService.Instance.ConnectionInfos[conn];
 
-            string failMessage = "";
+            var failMessage = "";
 
             if (profile.characters.Length >= profile.maxCharacterCount)
             {
@@ -250,7 +240,7 @@ namespace Runtime
             }
             else
             {
-                StartCoroutine(CreateCharacterCoroutine(conn, new CharacterData()
+                StartCoroutine(CreateCharacterCoroutine(conn, new CharacterData
                 {
                     name = msg.Name,
                     @class = msg.Class,
@@ -259,7 +249,7 @@ namespace Runtime
                 return;
             }
 
-            conn.Send(new CharacterCreationResponse()
+            conn.Send(new CharacterCreationResponse
             {
                 Code = ResponseCodeError,
                 Message = failMessage
@@ -268,7 +258,7 @@ namespace Runtime
 
         private IEnumerator CreateCharacterCoroutine(NetworkConnection conn, CharacterData data, bool recursiveCall = false)
         {
-            using (UnityWebRequest webRequest =
+            using (var webRequest =
                 new UnityWebRequest(
                     EndpointRegister.GetServerCreateCharacterUrl(data.name, ProfileService.Instance.ConnectionInfos[conn].steamId,
                         ServerAuthenticationService.Instance.serverAuthToken),
@@ -298,7 +288,7 @@ namespace Runtime
                         }
                     }
 
-                    conn.Send(new CharacterCreationResponse()
+                    conn.Send(new CharacterCreationResponse
                     {
                         Code = ResponseCodeError,
                         Message = "Failed to create character."
@@ -306,7 +296,7 @@ namespace Runtime
                     yield break;
                 }
 
-                conn.Send(new CharacterCreationResponse()
+                conn.Send(new CharacterCreationResponse
                 {
                     Code = ResponseCodeOk,
                     Message = data.name
@@ -337,7 +327,7 @@ namespace Runtime
 
         public void SendCharacterDeletionRequest(string characterId)
         {
-            NetworkClient.Send(new CharacterDeletionRequest()
+            NetworkClient.Send(new CharacterDeletionRequest
             {
                 CharacterId = characterId
             });
@@ -349,25 +339,20 @@ namespace Runtime
         private void OnCharacterDeletionRequest(NetworkConnection conn, CharacterDeletionRequest msg)
         {
             if (ProfileService.Instance.ConnectionInfos[conn].PlayingCharacter != null)
-            {
-                conn.Send(new CharacterCreationResponse()
+                conn.Send(new CharacterCreationResponse
                 {
                     Code = 403,
                     Message = "You cannot perform this operation while playing a character."
                 });
-            }
 
             var connectionInfo = ProfileService.Instance.ConnectionInfos[conn];
 
-            if (connectionInfo.characters.Any(c => c.characterId == msg.CharacterId))
-            {
-                StartCoroutine(DeleteCharacterCoroutine(conn, msg.CharacterId));
-            }
+            if (connectionInfo.characters.Any(c => c.characterId == msg.CharacterId)) StartCoroutine(DeleteCharacterCoroutine(conn, msg.CharacterId));
         }
 
         private IEnumerator DeleteCharacterCoroutine(NetworkConnection conn, string characterId, bool recursiveCall = false)
         {
-            using (UnityWebRequest webRequest = UnityWebRequest.Delete(
+            using (var webRequest = UnityWebRequest.Delete(
                 EndpointRegister.GetServerDeleteCharacterUrl(characterId, ServerAuthenticationService.Instance.serverAuthToken)
             ))
             {
@@ -392,7 +377,7 @@ namespace Runtime
                         }
                     }
 
-                    conn.Send(new CharacterDeletionResponse()
+                    conn.Send(new CharacterDeletionResponse
                     {
                         Code = ResponseCodeError,
                         Message = "Couldn't delete character."
@@ -400,7 +385,7 @@ namespace Runtime
                     yield break;
                 }
 
-                conn.Send(new CharacterCreationResponse()
+                conn.Send(new CharacterCreationResponse
                 {
                     Code = ResponseCodeOk,
                     Message = characterId
@@ -430,7 +415,7 @@ namespace Runtime
         [Client]
         public void SendCharacterPlayRequest(string characterId)
         {
-            NetworkClient.Send(new CharacterPlayRequest()
+            NetworkClient.Send(new CharacterPlayRequest
             {
                 CharacterId = characterId
             });
@@ -442,24 +427,20 @@ namespace Runtime
         private void OnCharacterPlayRequest(NetworkConnection conn, CharacterPlayRequest msg)
         {
             if (ProfileService.Instance.ConnectionInfos[conn].PlayingCharacter != null)
-            {
-                conn.Send(new CharacterPlayResponse()
+                conn.Send(new CharacterPlayResponse
                 {
                     Code = 403,
                     Message = "You cannot perform this operation while playing a character."
                 });
-            }
 
             try
             {
                 foreach (var characterInfo in ProfileService.Instance.ConnectionInfos[conn].characters)
-                {
                     if (characterInfo.characterId == msg.CharacterId)
                     {
                         StartCoroutine(LoadCharacterCoroutine(conn, characterInfo.characterId));
                         return;
                     }
-                }
             }
             catch (Exception e)
             {
@@ -472,19 +453,17 @@ namespace Runtime
             yield return StartCoroutine(ServerFetchCharacterCoroutine(conn, characterId));
 
             if (ProfileService.Instance.ConnectionInfos[conn].PlayingCharacter == null)
-            {
-                conn.Send(new CharacterPlayResponse()
+                conn.Send(new CharacterPlayResponse
                 {
                     Code = 400,
                     Message = "Cannot find character."
                 });
-            }
 
             var player = InstantiatePlayerCharacter(conn);
             var identity = player.GetComponent<NetworkIdentity>();
-            FlexSceneManager.LoadConnectionScenes(conn, new SingleSceneData(townHubScene, new NetworkIdentity[] {identity}), null);
+            FlexSceneManager.LoadConnectionScenes(conn, new SingleSceneData(townHubScene, new[] {identity}), null);
 
-            conn.Send(new CharacterPlayResponse()
+            conn.Send(new CharacterPlayResponse
             {
                 Code = 200,
                 Message = "Ok"

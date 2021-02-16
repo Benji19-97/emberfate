@@ -1,5 +1,6 @@
 ﻿// ReSharper disable InconsistentNaming
-namespace Runtime.Endpoints
+
+namespace Runtime.Registers
 {
     public static class PathRegister
     {

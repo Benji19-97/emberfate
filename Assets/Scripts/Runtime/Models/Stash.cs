@@ -6,6 +6,6 @@ namespace Runtime.Models
     public class Stash
     {
     }
-    
+
     //TODO: ReaderWriter
 }

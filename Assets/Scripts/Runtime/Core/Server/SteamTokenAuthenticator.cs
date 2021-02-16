@@ -4,23 +4,38 @@ using System.IO;
 using Mirror;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using Runtime.Endpoints;
 using Runtime.Helpers;
 using Runtime.Models;
-using Telepathy;
+using Runtime.Registers;
+using Runtime.Services;
+using Steamworks;
 using UnityEngine;
 using UnityEngine.Networking;
 
-namespace Runtime
+namespace Runtime.Core.Server
 {
     public class SteamTokenAuthenticator : NetworkAuthenticator
     {
+        private const int OkResponseCode = 200;
         public static string AuthTicket;
-
-        private string _webAPIKey;
         private string _appID;
 
-        private const int OkResponseCode = 200;
+        private string _webAPIKey;
+
+        public override void OnServerAuthenticate(NetworkConnection conn)
+        {
+        }
+
+        public override void OnClientAuthenticate(NetworkConnection conn)
+        {
+            var authRequestMessage = new AuthRequestMessage
+            {
+                Ticket = AuthTicket,
+                SteamId = SteamUser.GetSteamID().m_SteamID.ToString(),
+                PersonaName = SteamFriends.GetPersonaName()
+            };
+            NetworkClient.Send(authRequestMessage);
+        }
 
         private struct AuthRequestMessage : NetworkMessage
         {
@@ -43,21 +58,6 @@ namespace Runtime
             public bool publisherbanned;
         }
 
-        public override void OnServerAuthenticate(NetworkConnection conn)
-        {
-        }
-
-        public override void OnClientAuthenticate(NetworkConnection conn)
-        {
-            AuthRequestMessage authRequestMessage = new AuthRequestMessage()
-            {
-                Ticket = AuthTicket,
-                SteamId = Steamworks.SteamUser.GetSteamID().m_SteamID.ToString(),
-                PersonaName = Steamworks.SteamFriends.GetPersonaName()
-            };
-            NetworkClient.Send(authRequestMessage);
-        }
-
         #region Server
 
 #if UNITY_SERVER || UNITY_EDITOR
@@ -78,15 +78,9 @@ namespace Runtime
 
             try
             {
-                if (string.IsNullOrEmpty(_webAPIKey))
-                {
-                    FetchWebApiToken();
-                }
+                if (string.IsNullOrEmpty(_webAPIKey)) FetchWebApiToken();
 
-                if (string.IsNullOrEmpty(_appID))
-                {
-                    FetchAppId();
-                }
+                if (string.IsNullOrEmpty(_appID)) FetchAppId();
 
                 var steamApiUserAuthUrl = EndpointRegister.GetServerSteamApiUserAuthUrl(_webAPIKey, ticket, _appID);
                 webRequest = UnityWebRequest.Get(steamApiUserAuthUrl);
@@ -170,7 +164,7 @@ namespace Runtime
 
         private IEnumerator FetchProfileAndAuthenticateAfterCoroutine(NetworkConnection conn, string steamId, string steamName, bool recursiveCall = false)
         {
-            using (UnityWebRequest webRequest =
+            using (var webRequest =
                 UnityWebRequest.Get(EndpointRegister.GetServerFetchProfileUrl(steamId, ServerAuthenticationService.Instance.serverAuthToken)))
             {
                 yield return webRequest.SendWebRequest();
@@ -214,7 +208,7 @@ namespace Runtime
 
         private void ValidateTokenFailed(NetworkConnection conn, string reason)
         {
-            conn.Send(new AuthResponseMessage()
+            conn.Send(new AuthResponseMessage
             {
                 FailReason = reason
             });

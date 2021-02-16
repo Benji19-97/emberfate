@@ -1,15 +1,13 @@
 ﻿using System;
-using Mirror;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using Runtime.Helpers;
 
 namespace Runtime.Models
 {
     [Serializable]
     public class Character
     {
-        public static readonly string[] @Classes = {"Barbarian", "Sorceress", "Hunter"};
+        public static readonly string[] Classes = {"Barbarian", "Sorceress", "Hunter"};
 
         public string id;
         public string ownerSteamId;

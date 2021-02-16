@@ -1,5 +1,4 @@
 ﻿using System;
-using Mirror;
 
 namespace Runtime.Models
 {

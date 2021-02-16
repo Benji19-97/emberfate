@@ -1,9 +1,11 @@
 ﻿// ReSharper disable InconsistentNaming
 
-namespace Runtime.Endpoints
+namespace Runtime.Registers
 {
     public static class EndpointRegister
     {
+        private const string Client_FetchCharacterUrl = "http://localhost:3003/api/characters/";
+        private const string Client_FetchServerStatusUrl = "http://localhost:3001/api/serverstatus";
 #if UNITY_SERVER || UNITY_EDITOR
 
         //characters
@@ -22,9 +24,6 @@ namespace Runtime.Endpoints
         //status
         private const string Server_UpdateServerStatusUrl = "http://localhost:3000/api/serverstatus/update/";
 #endif
-        
-        private const string Client_FetchCharacterUrl = "http://localhost:3003/api/characters/";
-        private const string Client_FetchServerStatusUrl = "http://localhost:3001/api/serverstatus";
 
 #if UNITY_SERVER || UNITY_EDITOR
 
@@ -75,10 +74,10 @@ namespace Runtime.Endpoints
 #endif
 
         #region Client Urls
-        
+
         public static string GetClientFetchCharacterUrl(string profileSteamId, string characterId, string steamAuthToken)
         {
-            return Client_FetchCharacterUrl + profileSteamId + "/" + characterId +$"/?token={steamAuthToken}";
+            return Client_FetchCharacterUrl + profileSteamId + "/" + characterId + $"/?token={steamAuthToken}";
         }
 
         public static string GetClientFetchAllCharactersUrl(string profileSteamId, string steamAuthToken)
@@ -90,7 +89,7 @@ namespace Runtime.Endpoints
         {
             return Client_FetchServerStatusUrl;
         }
-        
+
         #endregion
     }
 }

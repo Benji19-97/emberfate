@@ -1,4 +1,5 @@
 ﻿using System;
+using Runtime.Core.Server;
 using UnityEngine;
 
 namespace Runtime.Helpers
@@ -19,10 +20,7 @@ namespace Runtime.Helpers
             Console.WriteLine(DateTime.Now.ToString("HH:mm:ss") + " " + message);
             Console.ForegroundColor = DefaultColor;
 #elif UNITY_EDITOR
-            if (GameServer.START_SERVER_IN_UNITY_EDITOR)
-            {
-                Debug.Log(message);
-            }
+            if (GameServer.START_SERVER_IN_UNITY_EDITOR) Debug.Log(message);
 #endif
         }
 
@@ -34,10 +32,7 @@ namespace Runtime.Helpers
             Console.ForegroundColor = DefaultColor;
 
 #elif UNITY_EDITOR
-            if (GameServer.START_SERVER_IN_UNITY_EDITOR)
-            {
-                Debug.LogWarning(message);
-            }
+            if (GameServer.START_SERVER_IN_UNITY_EDITOR) Debug.LogWarning(message);
 #endif
         }
 
@@ -49,10 +44,7 @@ namespace Runtime.Helpers
             Console.ForegroundColor = DefaultColor;
 
 #elif UNITY_EDITOR
-            if (GameServer.START_SERVER_IN_UNITY_EDITOR)
-            {
-                Debug.LogError(message);
-            }
+            if (GameServer.START_SERVER_IN_UNITY_EDITOR) Debug.LogError(message);
 #endif
         }
 
@@ -64,10 +56,7 @@ namespace Runtime.Helpers
             Console.ForegroundColor = DefaultColor;
 
 #elif UNITY_EDITOR
-            if (GameServer.START_SERVER_IN_UNITY_EDITOR)
-            {
-                Debug.Log(message);
-            }
+            if (GameServer.START_SERVER_IN_UNITY_EDITOR) Debug.Log(message);
 #endif
         }
     }

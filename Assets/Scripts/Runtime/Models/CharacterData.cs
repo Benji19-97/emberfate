@@ -1,5 +1,4 @@
 ﻿using System;
-using System.IO;
 using Mirror;
 
 namespace Runtime.Models
@@ -13,15 +12,15 @@ namespace Runtime.Models
 
         public byte[] Serialize()
         {
-            NetworkWriter writer = new NetworkWriter();
+            var writer = new NetworkWriter();
             writer.WriteCharacterData(this);
-            byte[] serialized = writer.ToArray();
+            var serialized = writer.ToArray();
             return serialized;
         }
 
         public static CharacterData Deserialize(byte[] data)
         {
-            NetworkReader reader = new NetworkReader(data);
+            var reader = new NetworkReader(data);
             return reader.ReadCharacterData();
         }
     }
@@ -37,7 +36,7 @@ namespace Runtime.Models
 
         public static CharacterData ReadCharacterData(this NetworkReader reader)
         {
-            CharacterData characterData = new CharacterData();
+            var characterData = new CharacterData();
             characterData.name = reader.ReadString();
             characterData.level = reader.ReadByte();
             characterData.@class = reader.ReadString();

@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using Runtime.Services;
+using UnityEngine;
 
 namespace Runtime.UI
 {
@@ -15,10 +16,7 @@ namespace Runtime.UI
 
         private void OnGetCharacters()
         {
-            foreach (Transform child in content.transform)
-            {
-                Destroy(child.gameObject);
-            }
+            foreach (Transform child in content.transform) Destroy(child.gameObject);
 
             foreach (var characterInfo in CharacterService.Instance.characters)
             {
@@ -36,19 +34,14 @@ namespace Runtime.UI
         public void DeleteCharacter()
         {
             if (!string.IsNullOrEmpty(CharacterButton.selectedCharacterId))
-            {
                 //TODO: Context window to ask if you really want to delete, including a warning
-                CharacterService.Instance.SendCharacterDeletionRequest(CharacterButton.selectedCharacterId); 
-            }
+                CharacterService.Instance.SendCharacterDeletionRequest(CharacterButton.selectedCharacterId);
         }
 
         public void OnPlay()
         {
             if (!string.IsNullOrEmpty(CharacterButton.selectedCharacterId))
-            {
                 CharacterService.Instance.SendCharacterPlayRequest(CharacterButton.selectedCharacterId);
-            }
         }
-    
     }
 }

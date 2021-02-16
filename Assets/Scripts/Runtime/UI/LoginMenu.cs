@@ -1,10 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using Mirror;
+using Runtime.Core.Server;
+using Runtime.Services;
 using UnityEngine;
 using UnityEngine.UI;
 #if !UNITY_SERVER
 using Steamworks;
+
 #endif
 
 namespace Runtime.UI
@@ -21,17 +24,14 @@ namespace Runtime.UI
         {
             ServerStatusService.Instance.serverStatusReceived.AddListener(UpdateServerDropdownList);
             serverDropdown.onValueChanged.AddListener(OnSelectServer);
-            
+
             GetAuthSessionTicketResponse = Callback<GetAuthSessionTicketResponse_t>.Create(OnGetAuthSessionTicketResponse);
         }
 
         private void UpdateServerDropdownList()
         {
             var list = new List<Dropdown.OptionData>();
-            foreach (var serverStatus in ServerStatusService.Instance.serverStatus)
-            {
-                list.Add(new Dropdown.OptionData(serverStatus.name));
-            }
+            foreach (var serverStatus in ServerStatusService.Instance.serverStatus) list.Add(new Dropdown.OptionData(serverStatus.name));
             serverDropdown.options = list;
         }
 
@@ -50,7 +50,7 @@ namespace Runtime.UI
         private void GetAuthSessionTicket()
         {
             _ticket = new byte[1024];
-            Steamworks.SteamUser.GetAuthSessionTicket(_ticket, 1024, out uint pcbTicket);
+            SteamUser.GetAuthSessionTicket(_ticket, 1024, out var pcbTicket);
         }
 
         private void OnGetAuthSessionTicketResponse(GetAuthSessionTicketResponse_t pCallback)
@@ -66,7 +66,7 @@ namespace Runtime.UI
 
         private string GetHexStringFromByteArray(byte[] bytes)
         {
-            string hexWithDashes = BitConverter.ToString(bytes);
+            var hexWithDashes = BitConverter.ToString(bytes);
             return hexWithDashes.Replace("-", "");
         }
 #endif

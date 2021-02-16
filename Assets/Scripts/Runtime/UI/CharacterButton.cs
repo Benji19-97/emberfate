@@ -1,9 +1,7 @@
-﻿using System;
-using Runtime.Models;
+﻿using Runtime.Models;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.UI;
-using CharacterInfo = Runtime.Models.CharacterInfo;
 
 namespace Runtime.UI
 {
@@ -13,8 +11,6 @@ namespace Runtime.UI
         private static readonly UnityEvent ResetSelection = new UnityEvent();
 #pragma warning restore 649
 
-        public static string selectedCharacterId { get; private set; }
-
         [SerializeField] private Button selectButton;
         [SerializeField] private Image buttonBackgroundImage;
         [SerializeField] private Text nameText;
@@ -22,8 +18,10 @@ namespace Runtime.UI
         [SerializeField] private Color selectedColor;
 
         private Character _attachedCharacter;
-        
+
         private Color _defaultColor;
+
+        public static string selectedCharacterId { get; private set; }
 
         private void Start()
         {
@@ -51,8 +49,5 @@ namespace Runtime.UI
             selectedCharacterId = _attachedCharacter.id;
             buttonBackgroundImage.color = selectedColor;
         }
-        
-        
-    
     }
 }

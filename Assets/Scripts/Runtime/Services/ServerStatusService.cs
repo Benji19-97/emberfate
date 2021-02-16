@@ -1,54 +1,24 @@
-﻿using System;
-using System.Collections;
-using System.IO;
-using Mirror;
+﻿using System.Collections;
+using System.Text;
 using Newtonsoft.Json;
-using Runtime.Endpoints;
+using Runtime.Core.Server;
+using Runtime.Core.Steam;
 using Runtime.Helpers;
 using Runtime.Models;
+using Runtime.Registers;
 using Runtime.UI;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.Networking;
 
-namespace Runtime
+namespace Runtime.Services
 {
     public class ServerStatusService : MonoBehaviour
     {
+        [HideInInspector] public UnityEvent serverStatusReceived;
         public static ServerStatusService Instance { get; private set; }
 
         public ServerStatus[] serverStatus { get; private set; }
-
-        [HideInInspector] public UnityEvent serverStatusReceived;
-
-        #region Unity Event functions
-
-        private void Awake()
-        {
-            if (Instance == null)
-            {
-                Instance = this;
-                DontDestroyOnLoad(gameObject);
-            }
-            else
-            {
-                Destroy(this);
-            }
-        }
-
-        private void Start()
-        {
-#if UNITY_SERVER
-            return;
-#elif UNITY_EDITOR
-            if (GameServer.START_SERVER_IN_UNITY_EDITOR)
-            {
-                return;
-            }
-#endif
-            SteamInitializer.Instance.initializedSteam.AddListener(OnSteamInitialized);
-        }
-        #endregion
 
         private void OnSteamInitialized()
         {
@@ -63,7 +33,7 @@ namespace Runtime
         private IEnumerator FetchServerStatusCoroutine()
         {
             NotificationSystem.Push("Retrieving server status ...", false);
-            using (UnityWebRequest webRequest = UnityWebRequest.Get(EndpointRegister.GetClientFetchServerStatusUrl()))
+            using (var webRequest = UnityWebRequest.Get(EndpointRegister.GetClientFetchServerStatusUrl()))
             {
                 yield return webRequest.SendWebRequest();
 
@@ -85,6 +55,33 @@ namespace Runtime
             }
         }
 
+        #region Unity Event functions
+
+        private void Awake()
+        {
+            if (Instance == null)
+            {
+                Instance = this;
+                DontDestroyOnLoad(gameObject);
+            }
+            else
+            {
+                Destroy(this);
+            }
+        }
+
+        private void Start()
+        {
+#if UNITY_SERVER
+            return;
+#elif UNITY_EDITOR
+            if (GameServer.START_SERVER_IN_UNITY_EDITOR) return;
+#endif
+            SteamInitializer.Instance.initializedSteam.AddListener(OnSteamInitialized);
+        }
+
+        #endregion
+
 #if UNITY_SERVER || UNITY_EDITOR
 
         public void SendServerStatusPostRequest(ServerStatus status)
@@ -99,7 +96,7 @@ namespace Runtime
             using (var webRequest =
                 new UnityWebRequest(EndpointRegister.GetServerUpdateServerStatusUrl(ServerAuthenticationService.Instance.serverAuthToken), "POST"))
             {
-                var jsonToSend = new System.Text.UTF8Encoding().GetBytes(postDataJson);
+                var jsonToSend = new UTF8Encoding().GetBytes(postDataJson);
                 webRequest.uploadHandler = new UploadHandlerRaw(jsonToSend);
                 webRequest.downloadHandler = new DownloadHandlerBuffer();
                 webRequest.SetRequestHeader("Content-Type", "application/json");
@@ -118,25 +115,16 @@ namespace Runtime
                     {
                         yield return StartCoroutine(ServerAuthenticationService.Instance.FetchAuthTokenCoroutine());
 
-                        if (ServerAuthenticationService.Instance.serverAuthToken != null)
-                        {
-                            StartCoroutine(PostServerStatusCoroutine(status, true));
-                        }
+                        if (ServerAuthenticationService.Instance.serverAuthToken != null) StartCoroutine(PostServerStatusCoroutine(status, true));
                     }
                 }
                 else
                 {
                     GameServer.Instance.StartServer();
                 }
-
- 
-
-     
             }
         }
 
 #endif
-
-
     }
 }

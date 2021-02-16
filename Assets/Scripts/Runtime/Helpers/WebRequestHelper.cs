@@ -1,14 +1,15 @@
-﻿using UnityEngine.Networking;
+﻿using System.Text;
+using UnityEngine.Networking;
 
-namespace Runtime.Utils
+namespace Runtime.Helpers
 {
     public static class WebRequestHelper
     {
         public static UnityWebRequest GetPostRequest(string url, string attachedJson)
         {
             var webRequest = new UnityWebRequest(url, "POST");
-            
-            byte[] jsonToSend = new System.Text.UTF8Encoding().GetBytes(attachedJson);
+
+            var jsonToSend = new UTF8Encoding().GetBytes(attachedJson);
             webRequest.uploadHandler = new UploadHandlerRaw(jsonToSend);
             webRequest.downloadHandler = new DownloadHandlerBuffer();
             webRequest.SetRequestHeader("Content-Type", "application/json");

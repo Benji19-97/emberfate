@@ -1,5 +1,5 @@
-﻿using System;
-using Mirror;
+﻿using Mirror;
+using Runtime.Core.Server;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -15,6 +15,47 @@ namespace Runtime.UI
 
         private bool _currentNotificationIsFading;
         private float _timer;
+
+        private void Update()
+        {
+            if (!_currentNotificationIsFading) return;
+
+            _timer += Time.deltaTime;
+
+            if (!(_timer > secondsBeforeFading)) return;
+
+            ReduceTextOpacity();
+        }
+
+        [ClientCallback]
+        private void OnServerNotification(NetworkConnection conn, ServerNotification notification)
+        {
+            Push(notification.Message, notification.IsFading);
+        }
+
+        public static void Push(string message, bool isFading)
+        {
+            if (Instance == null) return;
+
+            Instance.notificationText.text = message;
+            Instance.notificationText.color = Color.white;
+            Instance._timer = 0f;
+            Instance._currentNotificationIsFading = isFading;
+        }
+
+        private void ReduceTextOpacity()
+        {
+            var color = notificationText.color;
+            color.a -= 1f / fadeTime * Time.deltaTime;
+            color.a = Mathf.Clamp(color.a, 0, 1);
+            notificationText.color = color;
+        }
+
+        public struct ServerNotification : NetworkMessage
+        {
+            public string Message;
+            public bool IsFading;
+        }
 
         #region Unity Event functions
 
@@ -34,10 +75,7 @@ namespace Runtime.UI
         private void Start()
         {
 #if UNITY_EDITOR
-            if (GameServer.START_SERVER_IN_UNITY_EDITOR)
-            {
-                return;
-            }
+            if (GameServer.START_SERVER_IN_UNITY_EDITOR) return;
 #elif UNITY_SERVER
             return;
 #endif
@@ -45,49 +83,5 @@ namespace Runtime.UI
         }
 
         #endregion
-
-        public struct ServerNotification : NetworkMessage
-        {
-            public string Message;
-            public bool IsFading;
-        }
-
-        [ClientCallback]
-        private void OnServerNotification(NetworkConnection conn, ServerNotification notification)
-        {
-            Push(notification.Message, notification.IsFading);
-        }
-
-        public static void Push(string message, bool isFading)
-        {
-            if (Instance == null)
-            {
-                return;
-            }
-
-            Instance.notificationText.text = message;
-            Instance.notificationText.color = Color.white;
-            Instance._timer = 0f;
-            Instance._currentNotificationIsFading = isFading;
-        }
-
-        private void Update()
-        {
-            if (!_currentNotificationIsFading) return;
-            
-            _timer += Time.deltaTime;
-
-            if (!(_timer > secondsBeforeFading)) return;
-
-            ReduceTextOpacity();
-        }
-
-        private void ReduceTextOpacity()
-        {
-            var color = notificationText.color;
-            color.a -= 1f / fadeTime * Time.deltaTime;
-            color.a = Mathf.Clamp(color.a, 0, 1);
-            notificationText.color = color;
-        }
     }
 }

@@ -1,16 +1,15 @@
-﻿using System;
-using System.Linq;
+﻿using System.Linq;
 using Runtime.Models;
+using Runtime.Services;
 using UnityEngine;
 using UnityEngine.UI;
-using CharacterInfo = Runtime.Models.CharacterInfo;
 
 namespace Runtime.UI
 {
     public class CharacterCreationMenu : MonoBehaviour
     {
         [SerializeField] private GameObject characterMenu;
-        
+
         [SerializeField] private InputField nameInputField;
         [SerializeField] private Dropdown classDropdown;
         [SerializeField] private Button confirmButton;
@@ -46,8 +45,5 @@ namespace Runtime.UI
             nameInputField.text = "";
             classDropdown.value = 0;
         }
-        
-        
-        
     }
 }

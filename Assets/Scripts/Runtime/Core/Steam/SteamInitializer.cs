@@ -1,11 +1,10 @@
-﻿using System;
-using Mirror;
-using Runtime.UI;
+﻿using Runtime.UI;
 using Steamworks;
 using UnityEngine;
 using UnityEngine.Events;
+using GameServer = Runtime.Core.Server.GameServer;
 
-namespace Runtime
+namespace Runtime.Core.Steam
 {
     public class SteamInitializer : MonoBehaviour
     {
@@ -31,30 +30,23 @@ namespace Runtime
 #endif
 
             if (Instance == null)
-            {
                 Instance = this;
-            }
             else
-            {
                 Destroy(gameObject);
-            }
         }
 
 
-        void Start()
+        private void Start()
         {
 #if UNITY_SERVER
             return;
 #elif UNITY_EDITOR
-            if (GameServer.START_SERVER_IN_UNITY_EDITOR)
-            {
-                return;
-            }
+            if (GameServer.START_SERVER_IN_UNITY_EDITOR) return;
 #endif
             NotificationSystem.Push("Initializing Steam ...", false);
             if (SteamManager.Initialized)
             {
-                string personaName = SteamFriends.GetPersonaName();
+                var personaName = SteamFriends.GetPersonaName();
 
                 NotificationSystem.Push("Successfully initialized Steam. Welcome " + personaName + "!", true);
                 mainMenuCanvas.SetActive(true); //TODO: Game manager that handles things like this with the event below?
