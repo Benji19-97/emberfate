@@ -12,6 +12,7 @@ namespace Runtime.Registers
         private const string Server_FetchCharacterUrl = "http://localhost:3000/api/characters/";
         private const string Server_CreateCharacterUrl = "http://localhost:3000/api/characters/create/";
         private const string Server_DeleteCharacterUrl = "http://localhost:3000/api/characters/delete/";
+        private const string Server_UpdateCharacterUrl = "http://localhost:3000/api/characters/update/";
 
         //profiles
         private const string Server_FetchProfileUrl = "http://localhost:3000/api/profiles/";
@@ -42,6 +43,11 @@ namespace Runtime.Registers
         public static string GetServerDeleteCharacterUrl(string characterId, string serverAuthToken)
         {
             return Server_DeleteCharacterUrl + characterId + "/" + serverAuthToken;
+        }
+        
+        public static string GetServerUpdateCharacterUrl(string characterId, string serverAuthToken)
+        {
+            return Server_UpdateCharacterUrl + characterId + "/" + serverAuthToken;
         }
 
         public static string GetServerFetchProfileUrl(string profileSteamId, string serverAuthToken)

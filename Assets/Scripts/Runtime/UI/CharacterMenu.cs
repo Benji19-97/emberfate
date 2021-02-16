@@ -18,7 +18,7 @@ namespace Runtime.UI
         {
             foreach (Transform child in content.transform) Destroy(child.gameObject);
 
-            foreach (var characterInfo in CharacterService.Instance.characters)
+            foreach (var characterInfo in CharacterService.Instance.clientSideCharacterList)
             {
                 var button = Instantiate(characterButtonPrefab, content.transform);
                 button.GetComponent<CharacterButton>().SetCharacter(characterInfo);
