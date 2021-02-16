@@ -49,8 +49,17 @@ namespace Runtime.Services
             using (var webRequest =
                 new UnityWebRequest(
                     EndpointRegister.GetServerUpsertStashUrl(steamId, ServerAuthenticationService.Instance.serverAuthToken),
-                    "PUT"))
+                    "POST"))
             {
+
+                if (ProfileService.Instance.ConnectionInfos[conn].stash == null)
+                {
+                    ProfileService.Instance.ConnectionInfos[conn].stash = new Stash()
+                    {
+                        stashName = "newStash"
+                    };
+                }
+                
                 webRequest.uploadHandler = new UploadHandlerRaw(ProfileService.Instance.ConnectionInfos[conn].stash.Serialize());
                 webRequest.downloadHandler = new DownloadHandlerBuffer();
 

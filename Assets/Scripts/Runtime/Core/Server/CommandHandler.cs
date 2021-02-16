@@ -56,6 +56,16 @@ namespace Runtime.Core.Server
                 return;
             }
 
+            if (SetStashNameCommandHandler(command))
+            {
+                return;
+            }
+            
+            if (GetStashNameCommandHandler(command))
+            {
+                return;
+            }
+
             if (GiveCurrencyCommandHandler(command))
             {
                 return;
@@ -172,7 +182,66 @@ namespace Runtime.Core.Server
             }
 
             return false;
+        }
+        
+        private bool GetStashNameCommandHandler(string command)
+        {
+            if (command.StartsWith("/getstashname "))
+            {
+                try
+                {
+                    var commandParams = command.Substring(("/getstashname ").Length);
+                    var tokens = commandParams.Split(' ');
 
+                    if (tokens.Length == 1)
+                    {
+                        var idx = Convert.ToInt32(tokens[0]);
+
+                        var conn = ProfileService.Instance.ConnectionInfos.ElementAt(idx).Key;
+                        Console.WriteLine($"{conn} stash name is {ProfileService.Instance.ConnectionInfos[conn].stash.stashName}");
+                    }
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e);
+                    return false;
+                }
+                
+                return true;
+            }
+
+            return false;
+        }
+        
+        private bool SetStashNameCommandHandler(string command)
+        {
+            if (command.StartsWith("/setstashname "))
+            {
+                try
+                {
+                    var commandParams = command.Substring(("/setstashname ").Length);
+                    var tokens = commandParams.Split(' ');
+
+                    if (tokens.Length == 2)
+                    {
+                        var idx = Convert.ToInt32(tokens[0]);
+                        var stashName = tokens[1];
+
+                        var conn = ProfileService.Instance.ConnectionInfos.ElementAt(idx).Key;
+                        ProfileService.Instance.ConnectionInfos[conn].stash.stashName = stashName;
+                        Console.WriteLine($"Set {conn} stash name to {stashName}");
+                    }
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e);
+                    return false;
+                }
+                
+                return true;
+            }
+
+            return false;
         }
     }
 }

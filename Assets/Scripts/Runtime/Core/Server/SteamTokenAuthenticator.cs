@@ -164,6 +164,8 @@ namespace Runtime.Core.Server
 
         private IEnumerator FetchProfileAndAuthenticateAfterCoroutine(NetworkConnection conn, string steamId, string steamName, bool recursiveCall = false)
         {
+            ServerLogger.Log($"Started 'FetchProfileAndAuthenticateAfterCoroutine'. Args(conn: {conn}, steamId: {steamId}, recursiveCall: {recursiveCall})");
+            
             using (var webRequest =
                 UnityWebRequest.Get(EndpointRegister.GetServerFetchProfileUrl(steamId, ServerAuthenticationService.Instance.serverAuthToken)))
             {
@@ -185,15 +187,17 @@ namespace Runtime.Core.Server
                         if (ServerAuthenticationService.Instance.serverAuthToken != null)
                         {
                             StartCoroutine(FetchProfileAndAuthenticateAfterCoroutine(conn, steamId, steamName, true));
-                            yield break; //TODO: Error?
+                            yield break; 
                         }
                     }
 
                     ValidateTokenFailed(conn, "Server failed fetching profile from database.");
+                    ServerLogger.LogError(webRequest.error);
                     yield break;
                 }
 
-                var profile = JsonConvert.DeserializeObject<Profile>(webRequest.downloadHandler.text);
+                ServerLogger.LogSuccess($"Received profile of {conn}.");
+                var profile = Profile.Deserialize(webRequest.downloadHandler.text);
                 profile.name = steamName;
                 ValidateTokenSucceeded(conn, profile);
             }
@@ -201,6 +205,7 @@ namespace Runtime.Core.Server
 
         private void ValidateTokenSucceeded(NetworkConnection conn, Profile profile)
         {
+            ServerLogger.LogSuccess($"Validating steam auth token succeeded. Registering {profile.steamId} as active connection.");
             ProfileService.Instance.ConnectionInfos.Add(conn, profile);
             conn.Send(new AuthResponseMessage());
             OnServerAuthenticated.Invoke(conn);
@@ -208,6 +213,7 @@ namespace Runtime.Core.Server
 
         private void ValidateTokenFailed(NetworkConnection conn, string reason)
         {
+            ServerLogger.LogWarning($"Validating steam auth token failed. Sending negative response to connection.");
             conn.Send(new AuthResponseMessage
             {
                 FailReason = reason
