@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.IO;
 using Mirror;
 using Newtonsoft.Json;
@@ -130,6 +131,21 @@ namespace Runtime.Core.Server
             }
 
             return true;
+        }
+
+        public void PushServerToDb()
+        {
+            foreach (var connectionInfo in ProfileService.Instance.ConnectionInfos)
+            {
+                StartCoroutine(ProfileService.Instance.UpsertProfileCoroutine(connectionInfo.Key));
+
+                StartCoroutine(StashService.Instance.UpsertStashCoroutine(connectionInfo.Key));
+
+                if (connectionInfo.Value.PlayingCharacter != null)
+                {
+                    StartCoroutine(CharacterService.Instance.UpdateCharacterOnDatabaseCoroutine(connectionInfo.Value.PlayingCharacter));
+                }
+            }
         }
 #endif
     }

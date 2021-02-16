@@ -17,6 +17,9 @@ namespace Runtime.Registers
         //profiles
         private const string Server_FetchProfileUrl = "http://localhost:3000/api/profiles/";
         private const string Server_UpsertProfileUrl = "http://localhost:3000/api/profiles/upsert/";
+        
+        private const string Server_FetchStashUrl = "http://localhost:3000/api/profiles/stash/";
+        private const string Server_UpsertStashUrl = "http://localhost:3000/api/profiles/upsert/stash/";
 
         //auth
         private const string Server_FetchAuthTokenUrl = "http://localhost:3000/api/authentication/token";
@@ -58,6 +61,16 @@ namespace Runtime.Registers
         public static string GetServerUpsertProfileUrl(string profileSteamId, string serverAuthToken)
         {
             return Server_UpsertProfileUrl + profileSteamId + "/" + serverAuthToken;
+        }
+        
+        public static string GetServerUpsertStashUrl(string profileSteamId, string serverAuthToken)
+        {
+            return Server_UpsertStashUrl + profileSteamId + "/" + serverAuthToken;
+        }
+        
+        public static string GetServerFetchStashUrl(string profileSteamId, string serverAuthToken)
+        {
+            return Server_FetchStashUrl + profileSteamId + "/" + serverAuthToken;
         }
 
         public static string GetServerFetchAuthTokenUrl()

@@ -89,7 +89,8 @@ namespace Runtime.Core
                 yield return StartCoroutine(
                     CharacterService.Instance.UpdateCharacterOnDatabaseCoroutine(ProfileService.Instance.ConnectionInfos[conn].PlayingCharacter));
             }
-
+            
+            yield return StartCoroutine(StashService.Instance.UpsertStashCoroutine(conn));
             yield return StartCoroutine(ProfileService.Instance.UpsertProfileCoroutine(conn, true));
             ServerLogger.Log(conn + " disconnected");
         }
