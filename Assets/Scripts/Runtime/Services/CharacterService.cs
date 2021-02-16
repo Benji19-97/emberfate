@@ -269,7 +269,10 @@ namespace Runtime.Services
                     {
                         name = msg.Name,
                         @class = msg.Class,
-                        level = 0
+                        level = 0,
+                        deathCount = 0,
+                        isHardcore = false,
+                        season = 0
                     }));
                     return;
                 }
