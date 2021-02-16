@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections;
 using FirstGearGames.FlexSceneManager;
+using FirstGearGames.FlexSceneManager.LoadUnloadDatas;
 using Mirror;
 using Runtime.Core.Server;
 using Runtime.Helpers;
 using Runtime.Services;
+using Runtime.UI.Managers;
 using UnityEngine;
 
 namespace Runtime.Core
@@ -12,23 +14,19 @@ namespace Runtime.Core
     public class EmberfateNetworkManager : NetworkManager
     {
         public static EmberfateNetworkManager Instance;
-
-        [Header("UI")] [SerializeField] private GameObject loginMenu;
-        [SerializeField] private GameObject characterSelectionMenu;
-
+        
         public override void Awake()
         {
             if (Instance == null)
             {
                 Instance = this;
                 DontDestroyOnLoad(gameObject);
+                base.Awake();
             }
             else
             {
                 Destroy(gameObject);
             }
-
-            base.Awake();
         }
 
         public override void OnApplicationQuit()
@@ -45,19 +43,22 @@ namespace Runtime.Core
         [Client]
         public override void OnClientConnect(NetworkConnection conn)
         {
-            loginMenu.SetActive(false);
-            characterSelectionMenu.SetActive(true);
+            MainMenuUiManager.Instance.loginMenu.SetActive(false);
+            MainMenuUiManager.Instance.characterSelectionMenu.SetActive(true);
             CharacterService.Instance.RegisterClientHandlers();
             CharacterService.Instance.FetchCharacters();
+            
+            base.OnClientConnect(conn);
         }
 
         [Client]
         public void Disconnect()
         {
             StopClient();
-            loginMenu.SetActive(true);
-            characterSelectionMenu.SetActive(false);
+            MainMenuUiManager.Instance.loginMenu.SetActive(true);
+            MainMenuUiManager.Instance.characterSelectionMenu.SetActive(false);
         }
+        
 #endif
 
 #if UNITY_SERVER || UNITY_EDITOR
@@ -72,26 +73,29 @@ namespace Runtime.Core
         {
             FlexSceneManager.OnServerConnect(conn);
             ServerLogger.Log(conn + " connected");
+            base.OnServerConnect(conn);
         }
 
         [Server]
         public override void OnServerDisconnect(NetworkConnection conn)
         {
+            FlexSceneManager.OnServerDisconnect(conn);
             StartCoroutine(HandleClientDisconnectFromServer(conn));
+            base.OnServerDisconnect(conn);
         }
 
         [Server]
         private IEnumerator HandleClientDisconnectFromServer(NetworkConnection conn)
         {
-            FlexSceneManager.OnServerDisconnect(conn);
             if (ProfileService.Instance.ConnectionInfos[conn].PlayingCharacter != null)
             {
                 yield return StartCoroutine(
                     CharacterService.Instance.UpdateCharacterOnDatabaseCoroutine(ProfileService.Instance.ConnectionInfos[conn].PlayingCharacter));
             }
-            
             yield return StartCoroutine(StashService.Instance.UpsertStashCoroutine(conn));
             yield return StartCoroutine(ProfileService.Instance.UpsertProfileCoroutine(conn, true));
+            
+            
             ServerLogger.Log(conn + " disconnected");
         }
 
@@ -107,6 +111,8 @@ namespace Runtime.Core
                 $"Started server {GameServer.Instance.Config.name}[{GameServer.Instance.Config.location}] " +
                 $"on {GameServer.Instance.Config.ip}:{GameServer.Instance.Config.port} " +
                 $"with {GameServer.Instance.Config.maxConnections} maximum connections.");
+            
+            base.OnStartServer();
         }
 #endif
     }

@@ -539,6 +539,9 @@ namespace Runtime.Services
                 var identity = player.GetComponent<NetworkIdentity>();
                 FlexSceneManager.LoadConnectionScenes(conn, new SingleSceneData(townHubScene, new[] {identity}), null);
 
+                ProfileService.Instance.ConnectionInfos[conn].playerIdentity = identity;
+
+                
                 conn.Send(new CharacterPlayResponse
                 {
                     Code = 200,
@@ -565,7 +568,7 @@ namespace Runtime.Services
         private void OnCharacterPlayResponse(NetworkConnection conn, CharacterPlayResponse msg)
         {
             NotificationSystem.Push($"Received CharacterPlayResponse message: {msg.Code} {msg.Message}", true);
-            NetworkServer.SetClientReady(NetworkClient.connection);
+            
         }
 
         #endregion

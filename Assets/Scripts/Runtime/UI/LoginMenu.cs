@@ -62,7 +62,7 @@ namespace Runtime.UI
                 SteamTokenAuthenticator.AuthTicket = GetHexStringFromByteArray(_ticket);
                 // Debug.Log("SteamId: " + SteamUser.GetSteamID().m_SteamID);
                 // Debug.Log("AuthTicket: " + SteamTokenAuthenticator.AuthTicket);
-                NetworkManager.singleton.StartClient();
+                EmberfateNetworkManager.Instance.StartClient();
             }
         }
 

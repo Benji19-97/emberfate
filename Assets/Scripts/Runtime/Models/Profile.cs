@@ -1,4 +1,5 @@
 ﻿using System;
+using Mirror;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Runtime.Helpers;
@@ -15,6 +16,8 @@ namespace Runtime.Models
         public CharacterInfo[] characters;
         public byte maxCharacterCount;
         public bool @private;
+
+        [NonSerialized] public NetworkIdentity playerIdentity;
 
         [NonSerialized] public Character PlayingCharacter = null;
 
