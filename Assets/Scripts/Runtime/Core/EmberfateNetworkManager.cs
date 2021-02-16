@@ -33,10 +33,12 @@ namespace Runtime.Core
 
         public override void OnApplicationQuit()
         {
+#if !UNITY_SERVER
             if (NetworkClient.isConnected)
             {
                 Disconnect();
             }
+#endif
         }
 
 #if !UNITY_SERVER
@@ -82,8 +84,12 @@ namespace Runtime.Core
         private IEnumerator HandleClientDisconnectFromServer(NetworkConnection conn)
         {
             FlexSceneManager.OnServerDisconnect(conn);
-            yield return StartCoroutine(
-                CharacterService.Instance.UpdateCharacterOnDatabaseCoroutine(ProfileService.Instance.ConnectionInfos[conn].PlayingCharacter));
+            if (ProfileService.Instance.ConnectionInfos[conn].PlayingCharacter != null)
+            {
+                yield return StartCoroutine(
+                    CharacterService.Instance.UpdateCharacterOnDatabaseCoroutine(ProfileService.Instance.ConnectionInfos[conn].PlayingCharacter));
+            }
+
             yield return StartCoroutine(ProfileService.Instance.UpsertProfileCoroutine(conn, true));
             ServerLogger.Log(conn + " disconnected");
         }

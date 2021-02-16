@@ -103,12 +103,14 @@ namespace Runtime.Services
 
         #region Registering Handlers
 
+#if !UNITY_SERVER
         public void RegisterClientHandlers()
         {
             NetworkClient.RegisterHandler<CharacterCreationResponse>(OnCharacterCreationResponse);
             NetworkClient.RegisterHandler<CharacterDeletionResponse>(OnCharacterDeletionResponse);
             NetworkClient.RegisterHandler<CharacterPlayResponse>(OnCharacterPlayResponse);
         }
+#endif
 
 #if UNITY_SERVER || UNITY_EDITOR
         private void RegisterServerHandlers()
@@ -340,6 +342,7 @@ namespace Runtime.Services
             }
         }
 #endif
+#if !UNITY_SERVER
         [Client]
         private void OnCharacterCreationResponse(NetworkConnection conn, CharacterCreationResponse msg)
         {
@@ -355,6 +358,7 @@ namespace Runtime.Services
 
             characterCreationAnswer.Invoke();
         }
+#endif
 
         #endregion
 
@@ -403,7 +407,7 @@ namespace Runtime.Services
             ServerLogger.Log($"Started 'DeleteCharacterCoroutine'. Args(conn: {conn}, characterId: {characterId}, recursiveCall: {recursiveCall})");
 
             using (var webRequest = UnityWebRequest.Delete(
-                EndpointRegister.GetServerDeleteCharacterUrl(characterId, ServerAuthenticationService.Instance.serverAuthToken)
+                EndpointRegister.GetServerDeleteCharacterUrl(characterId, ProfileService.Instance.ConnectionInfos[conn].steamId  ,ServerAuthenticationService.Instance.serverAuthToken)
             ))
             {
                 yield return webRequest.SendWebRequest();
@@ -447,6 +451,7 @@ namespace Runtime.Services
         }
 #endif
 
+#if !UNITY_SERVER
         private void OnCharacterDeletionResponse(NetworkConnection conn, CharacterDeletionResponse msg)
         {
             if (msg.Code == ResponseCodeOk)
@@ -459,6 +464,7 @@ namespace Runtime.Services
                 NotificationSystem.Push("Failed to delete character: " + msg.Message, true);
             }
         }
+#endif
 
         #endregion
 
@@ -536,7 +542,6 @@ namespace Runtime.Services
                     Message = "Ok"
                 });
                 ServerLogger.LogSuccess($"{conn} is now playing character. Sending confirmation response to {conn}");
-
             }
             catch (Exception e)
             {
@@ -567,7 +572,7 @@ namespace Runtime.Services
         public IEnumerator UpdateCharacterOnDatabaseCoroutine(Character character, bool recursiveCall = false)
         {
             ServerLogger.Log($"Started 'UpdateCharacterOnDatabaseCoroutine'. Args(character: {character}, recursiveCall: {recursiveCall})");
-            
+
             using (var webRequest =
                 new UnityWebRequest(
                     EndpointRegister.GetServerUpdateCharacterUrl(character.id, ServerAuthenticationService.Instance.serverAuthToken),
@@ -600,7 +605,7 @@ namespace Runtime.Services
                     ServerLogger.LogError($"Failed to update character due to http error {character.id}. {webRequest.error}");
                     yield break;
                 }
-                
+
                 ServerLogger.LogSuccess($"Updated character {character.id} on db.");
             }
         }

@@ -9,8 +9,8 @@ namespace Runtime.Helpers
     public static class ServerLogger
     {
 #if ENABLE_LOGGING
-        private const ConsoleColor DefaultColor = ConsoleColor.Gray;
-        private const ConsoleColor InfoColor = ConsoleColor.White;
+        private const ConsoleColor DefaultColor = ConsoleColor.White;
+        private const ConsoleColor InfoColor = ConsoleColor.Gray;
         private const ConsoleColor WarningColor = ConsoleColor.DarkYellow;
         private const ConsoleColor ErrorColor = ConsoleColor.Red;
         private const ConsoleColor SuccessColor = ConsoleColor.Green;

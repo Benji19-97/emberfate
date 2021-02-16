@@ -40,9 +40,9 @@ namespace Runtime.Registers
             return Server_CreateCharacterUrl + characterName + "/" + profileSteamId + "/" + serverAuthToken;
         }
 
-        public static string GetServerDeleteCharacterUrl(string characterId, string serverAuthToken)
+        public static string GetServerDeleteCharacterUrl(string characterId, string steamId ,string serverAuthToken)
         {
-            return Server_DeleteCharacterUrl + characterId + "/" + serverAuthToken;
+            return Server_DeleteCharacterUrl + characterId + "/" + steamId + "/" + serverAuthToken;
         }
         
         public static string GetServerUpdateCharacterUrl(string characterId, string serverAuthToken)

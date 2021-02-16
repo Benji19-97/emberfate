@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using Mirror;
 using Newtonsoft.Json;
 using Runtime.Helpers;
@@ -55,6 +56,20 @@ namespace Runtime.Core.Server
             Config = JsonConvert.DeserializeObject<ServerConfig>(json);
         }
 
+
+        [RuntimeInitializeOnLoadMethod]
+        public static void RunOnStart()
+        {
+            try
+            {
+                Application.wantsToQuit += Instance.ExitApplication;
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+            }
+        }
+
         private void Start()
         {
             ServerStatusService.Instance.UpdateServerStatus(new ServerStatus
@@ -68,19 +83,18 @@ namespace Runtime.Core.Server
             });
         }
 
-        private void OnApplicationQuit()
+        public bool ExitApplication()
         {
 #if UNITY_SERVER
-            StopServer();
-            return;
+            return StopServer();
 #elif UNITY_EDITOR
             if (START_SERVER_IN_UNITY_EDITOR)
             {
-                StopServer();
-                return;
+                return StopServer();
             }
 #endif
             EmberfateNetworkManager.Instance.StopClient();
+            return true;
         }
 
         #endregion
@@ -89,24 +103,33 @@ namespace Runtime.Core.Server
         {
             EmberfateNetworkManager.Instance.networkAddress = Config.ip;
             EmberfateNetworkManager.Instance.maxConnections = Config.maxConnections;
-            EmberfateNetworkManager.Instance.GetComponent<TelepathyTransport>().port = (ushort) Config.port;
+            EmberfateNetworkManager.Instance.GetComponent<TelepathyTransport>().port = Config.port;
             EmberfateNetworkManager.Instance.StartServer();
         }
 
-        public void StopServer()
+        public bool StopServer()
         {
-            ServerLogger.LogWarning("Stopping server...");
-            ServerStatusService.Instance.UpdateServerStatus(new ServerStatus
+            try
             {
-                name = Config.name,
-                ip = Config.ip,
-                maxConnections = Config.maxConnections,
-                location = Config.location,
-                status = "offline",
-                port = Config.port
-            });
+                ServerLogger.Log("Stopping server...");
+                ServerStatusService.Instance.UpdateServerStatus(new ServerStatus
+                {
+                    name = Config.name,
+                    ip = Config.ip,
+                    maxConnections = Config.maxConnections,
+                    location = Config.location,
+                    status = "offline",
+                    port = Config.port
+                });
 
-            EmberfateNetworkManager.Instance.StopServer();
+                EmberfateNetworkManager.Instance.StopServer();
+            }
+            catch (Exception e)
+            {
+                ServerLogger.LogError(e.Message);
+            }
+
+            return true;
         }
 #endif
     }
