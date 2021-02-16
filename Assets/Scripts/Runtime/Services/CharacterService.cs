@@ -122,14 +122,14 @@ namespace Runtime
             NetworkServer.RegisterHandler<CharacterPlayRequest>(OnCharacterPlayRequest);
         }
 
-        #region Character List
+        #region Character Fetching
 
         public void GetCharactersFromDatabase()
         {
-            StartCoroutine(FetchCharacters());
+            StartCoroutine(FetchCharactersCoroutine());
         }
 
-        private IEnumerator FetchCharacters()
+        private IEnumerator FetchCharactersCoroutine()
         {
             NotificationSystem.Push("Retrieving characters ...", false);
 
@@ -163,42 +163,41 @@ namespace Runtime
             }
         }
 
-        private IEnumerator ServerFetchCharacter(NetworkConnection conn, string characterId, bool recursiveCall = false)
-        {
 #if UNITY_SERVER || UNITY_EDITOR
-
-            using (UnityWebRequest webRequest =
+        
+        /// <summary>Server sends web request, fetching a character. After receiving character, server sets profiles 'PlayingCharacter' to fetched character.</summary>
+        private IEnumerator ServerFetchCharacterCoroutine(NetworkConnection conn, string characterId, bool recursiveCall = false)
+        {
+            using (var webRequest =
                 UnityWebRequest.Get(EndpointRegister.GetServerFetchCharacterUrl(characterId, ServerAuthenticationService.Instance.serverAuthToken)))
             {
                 yield return webRequest.SendWebRequest();
 
-
-                if (webRequest.isNetworkError || webRequest.responseCode != 200)
+                if (webRequest.isNetworkError)
                 {
+                    ServerLogger.LogError(webRequest.error);
+                    yield break;
+                }
 
-
-                    //if error and unauthorized
+                if (webRequest.isHttpError)
+                {
                     if (!recursiveCall)
                     {
-                        //get new token
                         yield return StartCoroutine(ServerAuthenticationService.Instance.FetchAuthTokenCoroutine());
 
                         if (ServerAuthenticationService.Instance.serverAuthToken != null)
                         {
-                            StartCoroutine(ServerFetchCharacter(conn, characterId, true));
+                            StartCoroutine(ServerFetchCharacterCoroutine(conn, characterId, true));
                         }
                     }
                 }
                 else
                 {
-
                     ProfileService.Instance.ConnectionInfos[conn].PlayingCharacter = Character.Deserialize(webRequest.downloadHandler.text);
                 }
             }
-#else
-            yield break;
-#endif
         }
+#endif
 
         #endregion
 
@@ -212,12 +211,13 @@ namespace Runtime
                 Name = characterName,
                 Class = characterClass
             });
-            NotificationSystem.Push("Sent character create request,  " + characterName + " " + characterClass, false);
+            NotificationSystem.Push("Creating character...", false);
         }
 
+#if UNITY_SERVER || UNITY_EDITOR
+        [Server]
         private void OnCharacterCreationRequest(NetworkConnection conn, CharacterCreationRequest msg)
         {
-#if UNITY_SERVER || UNITY_EDITOR
             if (ProfileService.Instance.ConnectionInfos[conn].PlayingCharacter != null)
             {
                 conn.Send(new CharacterCreationResponse()
@@ -227,12 +227,11 @@ namespace Runtime
                 });
             }
 
-            var connectionInfo = ProfileService.Instance.ConnectionInfos[conn];
-            var newCharacterInfos = connectionInfo.characters.ToList();
+            var profile = ProfileService.Instance.ConnectionInfos[conn];
 
             string failMessage = "";
 
-            if (connectionInfo.characters.Length >= connectionInfo.maxCharacterCount)
+            if (profile.characters.Length >= profile.maxCharacterCount)
             {
                 failMessage = "Reached Character Count Limit";
             }
@@ -246,13 +245,13 @@ namespace Runtime
             }
             else
             {
-                CharacterData characterData = new CharacterData()
+                StartCoroutine(CreateCharacterCoroutine(conn, new CharacterData()
                 {
                     name = msg.Name,
                     @class = msg.Class,
                     level = 0
-                };
-                StartCoroutine(PostNewCharacter(conn, characterData));
+                }));
+                return;
             }
 
             conn.Send(new CharacterCreationResponse()
@@ -260,12 +259,10 @@ namespace Runtime
                 Code = ResponseCodeError,
                 Message = failMessage
             });
-#endif
         }
 
-        private IEnumerator PostNewCharacter(NetworkConnection conn, CharacterData data, bool recursiveCall = false)
+        private IEnumerator CreateCharacterCoroutine(NetworkConnection conn, CharacterData data, bool recursiveCall = false)
         {
-#if UNITY_SERVER || UNITY_EDITOR
             using (UnityWebRequest webRequest =
                 new UnityWebRequest(
                     EndpointRegister.GetServerCreateCharacterUrl(data.name, ProfileService.Instance.ConnectionInfos[conn].steamId,
@@ -277,54 +274,43 @@ namespace Runtime
 
                 yield return webRequest.SendWebRequest();
 
-                if (webRequest.isNetworkError || webRequest.responseCode != 200)
+                if (webRequest.isNetworkError)
                 {
-                    //if error and unauthorized
+                    ServerLogger.LogError(webRequest.error);
+                    yield break;
+                }
+
+                if (webRequest.isHttpError)
+                {
                     if (!recursiveCall)
                     {
-                        //get new token
                         yield return StartCoroutine(ServerAuthenticationService.Instance.FetchAuthTokenCoroutine());
 
-                        //if token is null, the token request failed
-                        if (ServerAuthenticationService.Instance.serverAuthToken == null)
+                        if (ServerAuthenticationService.Instance.serverAuthToken != null)
                         {
-                            conn.Send(new CharacterCreationResponse()
-                            {
-                                Code = ResponseCodeError,
-                                Message = "Couldn't create"
-                            });
-                        }
-                        else //if token is not null, we can try again to post status
-                        {
-                            StartCoroutine(PostNewCharacter(conn, data, true));
+                            StartCoroutine(CreateCharacterCoroutine(conn, data, true));
+                            yield break;
                         }
                     }
-                    else
-                    {
 
-                        conn.Send(new CharacterCreationResponse()
-                        {
-                            Code = ResponseCodeError,
-                            Message = "Couldn't create"
-                        });
-                    }
-                }
-                else
-                {
                     conn.Send(new CharacterCreationResponse()
                     {
-                        Code = ResponseCodeOk,
-                        Message = data.name
+                        Code = ResponseCodeError,
+                        Message = "Failed to create character."
                     });
-
-                    StartCoroutine(ProfileService.Instance.FetchProfileCoroutine(conn, ProfileService.Instance.ConnectionInfos[conn].steamId));
+                    yield break;
                 }
-            }
-#else
-            yield break;
-#endif
-        }
 
+                conn.Send(new CharacterCreationResponse()
+                {
+                    Code = ResponseCodeOk,
+                    Message = data.name
+                });
+
+                StartCoroutine(ProfileService.Instance.FetchProfileCoroutine(conn, ProfileService.Instance.ConnectionInfos[conn].steamId));
+            }
+        }
+#endif
         private void OnCharacterCreationResponse(NetworkConnection conn, CharacterCreationResponse msg)
         {
             if (msg.Code == ResponseCodeOk)
@@ -346,17 +332,17 @@ namespace Runtime
 
         public void SendCharacterDeletionRequest(string characterId)
         {
-            NotificationSystem.Push("Deleting character ...", false);
             NetworkClient.Send(new CharacterDeletionRequest()
             {
                 CharacterId = characterId
             });
-            NotificationSystem.Push("Sent character delete request for " + characterId, false);
+            NotificationSystem.Push("Deleting character ...", false);
         }
 
+#if UNITY_SERVER || UNITY_EDITOR
+        [Server]
         private void OnCharacterDeletionRequest(NetworkConnection conn, CharacterDeletionRequest msg)
         {
-#if UNITY_SERVER || UNITY_EDITOR
             if (ProfileService.Instance.ConnectionInfos[conn].PlayingCharacter != null)
             {
                 conn.Send(new CharacterCreationResponse()
@@ -366,75 +352,58 @@ namespace Runtime
                 });
             }
 
-            ;
-
             var connectionInfo = ProfileService.Instance.ConnectionInfos[conn];
 
             if (connectionInfo.characters.Any(c => c.characterId == msg.CharacterId))
             {
-                StartCoroutine(DeleteCharacter(conn, msg.CharacterId));
+                StartCoroutine(DeleteCharacterCoroutine(conn, msg.CharacterId));
             }
-#endif
         }
 
-        private IEnumerator DeleteCharacter(NetworkConnection conn, string characterId, bool recursiveCall = false)
+        private IEnumerator DeleteCharacterCoroutine(NetworkConnection conn, string characterId, bool recursiveCall = false)
         {
-#if UNITY_SERVER || UNITY_EDITOR
-
             using (UnityWebRequest webRequest = UnityWebRequest.Delete(
                 EndpointRegister.GetServerDeleteCharacterUrl(characterId, ServerAuthenticationService.Instance.serverAuthToken)
             ))
             {
                 yield return webRequest.SendWebRequest();
 
-                if (webRequest.isNetworkError || webRequest.responseCode != 200)
+                if (webRequest.isNetworkError)
                 {
-                    //if error and unauthorized
+                    ServerLogger.LogError(webRequest.error);
+                    yield break;
+                }
+
+                if (webRequest.isHttpError)
+                {
                     if (!recursiveCall)
                     {
-                        //get new token
                         yield return StartCoroutine(ServerAuthenticationService.Instance.FetchAuthTokenCoroutine());
 
-                        //if token is null, the token request failed
-                        if (ServerAuthenticationService.Instance.serverAuthToken == null)
+                        if (ServerAuthenticationService.Instance.serverAuthToken != null)
                         {
-
-                            conn.Send(new CharacterCreationResponse()
-                            {
-                                Code = ResponseCodeError,
-                                Message = "Couldn't delete"
-                            });
-                        }
-                        else //if token is not null, we can try again to post status
-                        {
-                            StartCoroutine(DeleteCharacter(conn, characterId, true));
+                            StartCoroutine(DeleteCharacterCoroutine(conn, characterId, true));
+                            yield break;
                         }
                     }
-                    else
-                    {
 
-                        conn.Send(new CharacterDeletionResponse()
-                        {
-                            Code = ResponseCodeError,
-                            Message = "Couldn't delete"
-                        });
-                    }
-                }
-                else
-                {
-                    conn.Send(new CharacterCreationResponse()
+                    conn.Send(new CharacterDeletionResponse()
                     {
-                        Code = ResponseCodeOk,
-                        Message = characterId
+                        Code = ResponseCodeError,
+                        Message = "Couldn't delete character."
                     });
-
-                    StartCoroutine(ProfileService.Instance.FetchProfileCoroutine(conn, ProfileService.Instance.ConnectionInfos[conn].steamId));
+                    yield break;
                 }
+
+                conn.Send(new CharacterCreationResponse()
+                {
+                    Code = ResponseCodeOk,
+                    Message = characterId
+                });
+                StartCoroutine(ProfileService.Instance.FetchProfileCoroutine(conn, ProfileService.Instance.ConnectionInfos[conn].steamId));
             }
-#else
-            yield break;
-#endif
         }
+#endif
 
         private void OnCharacterDeletionResponse(NetworkConnection conn, CharacterDeletionResponse msg)
         {
@@ -451,8 +420,9 @@ namespace Runtime
 
         #endregion
 
-        #region Character Play
+        #region Character Playing
 
+        [Client]
         public void SendCharacterPlayRequest(string characterId)
         {
             NetworkClient.Send(new CharacterPlayRequest()
@@ -462,11 +432,10 @@ namespace Runtime
             NotificationSystem.Push("Sent character play request for " + characterId, false);
         }
 
+#if UNITY_SERVER || UNITY_EDITOR
+        [Server]
         private void OnCharacterPlayRequest(NetworkConnection conn, CharacterPlayRequest msg)
         {
-#if UNITY_SERVER || UNITY_EDITOR
-
-
             if (ProfileService.Instance.ConnectionInfos[conn].PlayingCharacter != null)
             {
                 conn.Send(new CharacterPlayResponse()
@@ -478,28 +447,24 @@ namespace Runtime
 
             try
             {
-
                 foreach (var characterInfo in ProfileService.Instance.ConnectionInfos[conn].characters)
                 {
-
                     if (characterInfo.characterId == msg.CharacterId)
                     {
-                        StartCoroutine(LoadCharacterForPlayer(conn, msg.CharacterId));
+                        StartCoroutine(LoadCharacterCoroutine(conn, characterInfo.characterId));
+                        return;
                     }
                 }
             }
             catch (Exception e)
             {
+                ServerLogger.LogError(e.Message);
             }
-#endif
         }
 
-        private IEnumerator LoadCharacterForPlayer(NetworkConnection conn, string characterId)
+        private IEnumerator LoadCharacterCoroutine(NetworkConnection conn, string characterId)
         {
-#if UNITY_SERVER || UNITY_EDITOR
-            yield return StartCoroutine(ServerFetchCharacter(conn, characterId));
-
-
+            yield return StartCoroutine(ServerFetchCharacterCoroutine(conn, characterId));
 
             if (ProfileService.Instance.ConnectionInfos[conn].PlayingCharacter == null)
             {
@@ -510,20 +475,25 @@ namespace Runtime
                 });
             }
 
-            var player = LoadPlayerCharacter(conn);
+            var player = InstantiatePlayerCharacter(conn);
             var identity = player.GetComponent<NetworkIdentity>();
             FlexSceneManager.LoadConnectionScenes(conn, new SingleSceneData(townHubScene, new NetworkIdentity[] {identity}), null);
-
 
             conn.Send(new CharacterPlayResponse()
             {
                 Code = 200,
                 Message = "Ok"
             });
-#else
-            yield break;
-#endif
         }
+        
+        private GameObject InstantiatePlayerCharacter(NetworkConnection conn)
+        {
+            var startPos = Vector3.one;
+            var player = Instantiate(EmberfateNetworkManager.Instance.playerPrefab, startPos, Quaternion.identity);
+            NetworkServer.AddPlayerForConnection(conn, player);
+            return player;
+        }
+#endif
 
         private void OnCharacterPlayResponse(NetworkConnection conn, CharacterPlayResponse msg)
         {
@@ -531,13 +501,7 @@ namespace Runtime
             NetworkServer.SetClientReady(NetworkClient.connection);
         }
 
-        private GameObject LoadPlayerCharacter(NetworkConnection conn)
-        {
-            var startPos = Vector3.one;
-            var player = Instantiate(EmberfateNetworkManager.Instance.playerPrefab, startPos, Quaternion.identity);
-            NetworkServer.AddPlayerForConnection(conn, player);
-            return player;
-        }
+
 
         #endregion
     }
