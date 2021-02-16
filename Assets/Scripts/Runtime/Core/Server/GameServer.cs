@@ -57,7 +57,7 @@ namespace Runtime.Core.Server
 
         private void Start()
         {
-            ServerStatusService.Instance.SendServerStatusPostRequest(new ServerStatus
+            ServerStatusService.Instance.PostServerStatus(new ServerStatus
             {
                 name = Config.name,
                 ip = Config.ip,
@@ -96,7 +96,7 @@ namespace Runtime.Core.Server
         public void StopServer()
         {
             ServerLogger.LogWarning("Stopping server...");
-            ServerStatusService.Instance.SendServerStatusPostRequest(new ServerStatus
+            ServerStatusService.Instance.PostServerStatus(new ServerStatus
             {
                 name = Config.name,
                 ip = Config.ip,

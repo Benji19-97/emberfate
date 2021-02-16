@@ -22,10 +22,10 @@ namespace Runtime.Services
 
         private void OnSteamInitialized()
         {
-            SendGetRequest();
+            FetchServerStatus();
         }
 
-        public void SendGetRequest()
+        public void FetchServerStatus()
         {
             StartCoroutine(FetchServerStatusCoroutine());
         }
@@ -84,7 +84,7 @@ namespace Runtime.Services
 
 #if UNITY_SERVER || UNITY_EDITOR
 
-        public void SendServerStatusPostRequest(ServerStatus status)
+        public void PostServerStatus(ServerStatus status)
         {
             StartCoroutine(PostServerStatusCoroutine(status));
         }
