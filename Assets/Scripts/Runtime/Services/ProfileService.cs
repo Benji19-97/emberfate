@@ -67,7 +67,7 @@ namespace Runtime.Services
 
                 try
                 {
-                    ConnectionInfos[conn] = JsonConvert.DeserializeObject<Profile>(webRequest.downloadHandler.text);
+                    ConnectionInfos[conn] = Profile.Deserialize(webRequest.downloadHandler.text);
                     ServerLogger.LogSuccess($"Fetched profile {steamId} of db.");
                 }
                 catch (Exception e)
@@ -87,7 +87,7 @@ namespace Runtime.Services
             string attachedJson;
             try
             {
-                attachedJson = JsonConvert.SerializeObject(ConnectionInfos[conn]);
+                attachedJson = ConnectionInfos[conn].Serialize();
             }
             catch (Exception e)
             {

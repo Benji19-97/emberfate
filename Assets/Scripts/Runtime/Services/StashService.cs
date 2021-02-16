@@ -83,54 +83,54 @@ namespace Runtime.Services
             }
         }
 
-        public IEnumerator FetchStashCoroutine(NetworkConnection conn, bool recursiveCall = false)
-        {
-            ServerLogger.Log($"Started 'FetchStashCoroutine'. Args(conn: {conn}, recursiveCall: {recursiveCall})");
-
-            string steamId;
-            try
-            {
-                steamId = ProfileService.Instance.ConnectionInfos[conn].steamId;
-            }
-            catch (Exception e)
-            {
-                ServerLogger.LogError(e.Message);
-                yield break;
-            }
-
-            using (var webRequest =
-                UnityWebRequest.Get(EndpointRegister.GetServerFetchStashUrl(steamId, ServerAuthenticationService.Instance.serverAuthToken)))
-            {
-                yield return webRequest.SendWebRequest();
-
-                if (webRequest.isNetworkError)
-                {
-                    ServerLogger.LogError(webRequest.error);
-                    yield break;
-                }
-
-                if (webRequest.isHttpError)
-                {
-                    if (!recursiveCall)
-                    {
-                        yield return StartCoroutine(ServerAuthenticationService.Instance.FetchAuthTokenCoroutine());
-
-                        if (ServerAuthenticationService.Instance.serverAuthToken != null)
-                        {
-                            StartCoroutine(FetchStashCoroutine(conn, true));
-                            yield break;
-                        }
-                    }
-
-                    ServerLogger.LogError(webRequest.error);
-                }
-                else
-                {
-                    ProfileService.Instance.ConnectionInfos[conn].stash = Stash.Deserialize(webRequest.downloadHandler.text);
-                    ServerLogger.LogSuccess($"Received and deserialized stash of {conn}");
-                }
-            }
-        }
+        // public IEnumerator FetchStashCoroutine(NetworkConnection conn, bool recursiveCall = false)
+        // {
+        //     ServerLogger.Log($"Started 'FetchStashCoroutine'. Args(conn: {conn}, recursiveCall: {recursiveCall})");
+        //
+        //     string steamId;
+        //     try
+        //     {
+        //         steamId = ProfileService.Instance.ConnectionInfos[conn].steamId;
+        //     }
+        //     catch (Exception e)
+        //     {
+        //         ServerLogger.LogError(e.Message);
+        //         yield break;
+        //     }
+        //
+        //     using (var webRequest =
+        //         UnityWebRequest.Get(EndpointRegister.GetServerFetchStashUrl(steamId, ServerAuthenticationService.Instance.serverAuthToken)))
+        //     {
+        //         yield return webRequest.SendWebRequest();
+        //
+        //         if (webRequest.isNetworkError)
+        //         {
+        //             ServerLogger.LogError(webRequest.error);
+        //             yield break;
+        //         }
+        //
+        //         if (webRequest.isHttpError)
+        //         {
+        //             if (!recursiveCall)
+        //             {
+        //                 yield return StartCoroutine(ServerAuthenticationService.Instance.FetchAuthTokenCoroutine());
+        //
+        //                 if (ServerAuthenticationService.Instance.serverAuthToken != null)
+        //                 {
+        //                     StartCoroutine(FetchStashCoroutine(conn, true));
+        //                     yield break;
+        //                 }
+        //             }
+        //
+        //             ServerLogger.LogError(webRequest.error);
+        //         }
+        //         else
+        //         {
+        //             ProfileService.Instance.ConnectionInfos[conn].stash = Stash.Deserialize(webRequest.downloadHandler.text);
+        //             ServerLogger.LogSuccess($"Received and deserialized stash of {conn}");
+        //         }
+        //     }
+        // }
     }
 #endif
 }

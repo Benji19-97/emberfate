@@ -521,7 +521,6 @@ namespace Runtime.Services
             ServerLogger.Log($"Started 'LoadCharacterCoroutine'. Args(conn: {conn}, characterId: {characterId})");
 
             yield return StartCoroutine(ServerFetchCharacterCoroutine(conn, characterId));
-            yield return StartCoroutine(StashService.Instance.FetchStashCoroutine(conn));
 
             try
             {
