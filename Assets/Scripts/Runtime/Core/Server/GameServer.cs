@@ -13,7 +13,6 @@ namespace Runtime
 {
     public class GameServer : MonoBehaviour
     {
-
 #if UNITY_SERVER || UNITY_EDITOR
 
 #if UNITY_EDITOR
@@ -33,6 +32,7 @@ namespace Runtime
             if (!START_SERVER_IN_UNITY_EDITOR)
             {
                 Destroy(gameObject);
+                return;
             }
 #endif
 
@@ -46,8 +46,11 @@ namespace Runtime
                 Destroy(gameObject);
                 return;
             }
-
+#if UNITY_EDITOR
+            string path = PathRegister.Server_ConfigPath_UnityEditor;
+#else
             string path = PathRegister.Server_ConfigPath;
+#endif
             StreamReader reader = new StreamReader(path);
             string json = reader.ReadToEnd();
             reader.Close();
@@ -66,7 +69,7 @@ namespace Runtime
                 port = Config.port
             });
         }
-        
+
         private void OnApplicationQuit()
         {
 #if UNITY_SERVER
@@ -83,7 +86,7 @@ namespace Runtime
         }
 
         #endregion
-        
+
         public void StartServer()
         {
             EmberfateNetworkManager.Instance.networkAddress = Config.ip;
@@ -104,7 +107,7 @@ namespace Runtime
                 status = "offline",
                 port = Config.port
             });
-            
+
             EmberfateNetworkManager.Instance.StopServer();
         }
 #endif

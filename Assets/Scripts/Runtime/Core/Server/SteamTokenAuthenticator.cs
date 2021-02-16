@@ -120,7 +120,11 @@ namespace Runtime
 
         private void FetchWebApiToken()
         {
+#if UNITY_EDITOR
+            const string path = PathRegister.Server_SteamWebApiKeyPath_UnityEditor;
+#else
             const string path = PathRegister.Server_SteamWebApiKeyPath;
+#endif
             var reader = new StreamReader(path);
             _webAPIKey = reader.ReadToEnd();
             reader.Close();
@@ -128,7 +132,11 @@ namespace Runtime
 
         private void FetchAppId()
         {
+#if UNITY_EDITOR
+            const string path = PathRegister.SteamAppIdPath_UnityEditor;
+#else
             const string path = PathRegister.SteamAppIdPath;
+#endif
             var reader = new StreamReader(path);
             _appID = reader.ReadToEnd();
             reader.Close();
@@ -186,14 +194,14 @@ namespace Runtime
                             yield break; //TODO: Error?
                         }
                     }
+
                     ValidateTokenFailed(conn, "Server failed fetching profile from database.");
                     yield break;
                 }
-                
+
                 var profile = JsonConvert.DeserializeObject<Profile>(webRequest.downloadHandler.text);
                 profile.name = steamName;
                 ValidateTokenSucceeded(conn, profile);
-
             }
         }
 

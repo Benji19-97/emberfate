@@ -43,7 +43,7 @@ namespace Runtime
             loginMenu.SetActive(false);
             characterSelectionMenu.SetActive(true);
             CharacterService.Instance.RegisterClientHandlers();
-            CharacterService.Instance.GetCharactersFromDatabase();
+            CharacterService.Instance.FetchCharacters();
         }
 
         public void Disconnect()

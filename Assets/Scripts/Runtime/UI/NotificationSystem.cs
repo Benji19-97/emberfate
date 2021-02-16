@@ -23,7 +23,7 @@ namespace Runtime.UI
             if (Instance == null)
             {
                 Instance = this;
-                // DontDestroyOnLoad(gameObject); TODO: make this dont destroy somehow
+                DontDestroyOnLoad(transform.parent.gameObject);
             }
             else
             {

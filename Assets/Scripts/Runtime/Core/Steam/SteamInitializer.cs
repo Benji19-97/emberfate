@@ -19,6 +19,7 @@ namespace Runtime
         {
 #if UNITY_SERVER
             Destroy(gameObject);
+            return;
 #endif
 
 #if UNITY_EDITOR

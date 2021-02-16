@@ -17,6 +17,7 @@ namespace Runtime
         public string serverAuthToken { get; private set; }
 
         #region Unity Event functions
+
         private void Awake()
         {
 #if UNITY_EDITOR
@@ -35,6 +36,7 @@ namespace Runtime
                 Destroy(gameObject);
             }
         }
+
         #endregion
 
         public IEnumerator FetchAuthTokenCoroutine()
@@ -62,7 +64,11 @@ namespace Runtime
 
         private static string ReadServerPassword()
         {
+#if UNITY_EDITOR
+            var path = PathRegister.Server_PasswordPath_UnityEditor;
+#else
             var path = PathRegister.Server_PasswordPath;
+#endif
             var reader = new StreamReader(path);
             var pw = reader.ReadToEnd();
             reader.Close();

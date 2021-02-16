@@ -1,7 +1,0 @@
-{
-  "name": "GS1",
-  "maxConnections": 1,
-  "location": "EU",
-  "ip": "localhost",
-  "port": 7777
-}

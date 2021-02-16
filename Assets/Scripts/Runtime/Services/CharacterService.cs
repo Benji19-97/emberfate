@@ -17,10 +17,22 @@ using CharacterInfo = Runtime.Models.CharacterInfo;
 
 namespace Runtime
 {
-    //TODO: set the 'ClientCallback' and 'ServerCallback' attributes and also compiler stuff to strip server code, do it in the whole class
-    //TODO: exception handling
     public class CharacterService : MonoBehaviour
     {
+        public static CharacterService Instance;
+
+        public UnityEvent characterListChanged;
+        public UnityEvent characterCreationAnswer;
+        
+        public Character[] characters;
+
+        private const short ResponseCodeOk = 200;
+        private const short ResponseCodeError = 401;
+
+
+        [Header("Scenes")] [Scene] [SerializeField]
+        private string townHubScene;
+        
         #region NetworkMessages
 
         public struct CharacterCreationRequest : NetworkMessage
@@ -59,22 +71,6 @@ namespace Runtime
 
         #endregion
 
-        public static CharacterService Instance;
-
-        public UnityEvent characterListChanged;
-        public UnityEvent characterCreationAnswer;
-
-
-        public Character[] characters;
-
-        private const short ResponseCodeOk = 200;
-        private const short ResponseCodeError = 401;
-
-
-        [Header("Scenes")] [Scene] [SerializeField]
-        private string townHubScene;
-
-
         #region Unity Event functions
 
         private void Awake()
@@ -107,6 +103,7 @@ namespace Runtime
 
         #endregion
 
+        #region Registering Handlers
 
         public void RegisterClientHandlers()
         {
@@ -115,16 +112,20 @@ namespace Runtime
             NetworkClient.RegisterHandler<CharacterPlayResponse>(OnCharacterPlayResponse);
         }
 
-        public void RegisterServerHandlers()
+#if UNITY_SERVER || UNITY_EDITOR
+        private void RegisterServerHandlers()
         {
             NetworkServer.RegisterHandler<CharacterCreationRequest>(OnCharacterCreationRequest);
             NetworkServer.RegisterHandler<CharacterDeletionRequest>(OnCharacterDeletionRequest);
             NetworkServer.RegisterHandler<CharacterPlayRequest>(OnCharacterPlayRequest);
         }
+#endif
+
+        #endregion
 
         #region Character Fetching
 
-        public void GetCharactersFromDatabase()
+        public void FetchCharacters()
         {
             StartCoroutine(FetchCharactersCoroutine());
         }
@@ -145,26 +146,30 @@ namespace Runtime
                 }
                 else
                 {
-                    NotificationSystem.Push("Retrieved characters from Game Server.", true);
-
-                    var jArray = JArray.Parse(webRequest.downloadHandler.text);
-
-                    var newCharacters = new Character[jArray.Count];
-
-                    for (int i = 0; i < jArray.Count; i++)
+                    try
                     {
-                        newCharacters[i] = Character.Deserialize(jArray[i].ToString());
+                        NotificationSystem.Push("Retrieved characters from Game Server.", true);
+                        var jArray = JArray.Parse(webRequest.downloadHandler.text);
+                        var newCharacters = new Character[jArray.Count];
+                        for (int i = 0; i < jArray.Count; i++)
+                        {
+                            newCharacters[i] = Character.Deserialize(jArray[i].ToString());
+                        }
+
+                        characters = newCharacters;
+                        characterListChanged.Invoke();
                     }
-
-                    characters = newCharacters;
-
-                    characterListChanged.Invoke();
+                    catch (Exception e)
+                    {
+                        NotificationSystem.Push(e.Message, false);
+                        throw;
+                    }
                 }
             }
         }
 
 #if UNITY_SERVER || UNITY_EDITOR
-        
+
         /// <summary>Server sends web request, fetching a character. After receiving character, server sets profiles 'PlayingCharacter' to fetched character.</summary>
         private IEnumerator ServerFetchCharacterCoroutine(NetworkConnection conn, string characterId, bool recursiveCall = false)
         {
@@ -316,7 +321,7 @@ namespace Runtime
             if (msg.Code == ResponseCodeOk)
             {
                 NotificationSystem.Push("Successfully created character: " + msg.Message, true);
-                GetCharactersFromDatabase();
+                FetchCharacters();
             }
             else
             {
@@ -410,7 +415,7 @@ namespace Runtime
             if (msg.Code == ResponseCodeOk)
             {
                 NotificationSystem.Push("Successfully deleted character: " + msg.Message, true);
-                GetCharactersFromDatabase();
+                FetchCharacters();
             }
             else
             {
@@ -485,7 +490,7 @@ namespace Runtime
                 Message = "Ok"
             });
         }
-        
+
         private GameObject InstantiatePlayerCharacter(NetworkConnection conn)
         {
             var startPos = Vector3.one;
@@ -500,8 +505,6 @@ namespace Runtime
             Debug.Log(msg.Code + ": " + msg.Message);
             NetworkServer.SetClientReady(NetworkClient.connection);
         }
-
-
 
         #endregion
     }

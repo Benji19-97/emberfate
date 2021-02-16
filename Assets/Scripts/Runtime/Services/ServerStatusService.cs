@@ -87,7 +87,6 @@ namespace Runtime
 
 #if UNITY_SERVER || UNITY_EDITOR
 
-        [Server]
         public void SendServerStatusPostRequest(ServerStatus status)
         {
             StartCoroutine(PostServerStatusCoroutine(status));
