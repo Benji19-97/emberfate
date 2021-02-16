@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.IO;
 using Newtonsoft.Json;
 using Runtime.Core.Server;
@@ -8,9 +9,9 @@ using UnityEngine;
 
 namespace Runtime.Services
 {
+#if UNITY_SERVER || UNITY_EDITOR
     public class ServerAuthenticationService : MonoBehaviour
     {
-#if UNITY_SERVER || UNITY_EDITOR
         public static ServerAuthenticationService Instance;
         public string serverAuthToken { get; private set; }
 
@@ -36,11 +37,21 @@ namespace Runtime.Services
 
         public IEnumerator FetchAuthTokenCoroutine()
         {
-            var attachedJson = JsonConvert.SerializeObject(new
+            ServerLogger.Log($"Started 'FetchAuthTokenCoroutine'");
+            string attachedJson;
+            try
             {
-                GameServer.Instance.Config.name,
-                password = ReadServerPassword()
-            });
+                attachedJson = JsonConvert.SerializeObject(new
+                {
+                    GameServer.Instance.Config.name,
+                    password = ReadServerPassword()
+                });
+            }
+            catch (Exception e)
+            {
+                ServerLogger.LogError(e.Message);
+                throw;
+            }
 
             using (var webRequest = WebRequestHelper.GetPostRequest(EndpointRegister.GetServerFetchAuthTokenUrl(), attachedJson))
             {
@@ -48,12 +59,20 @@ namespace Runtime.Services
 
                 if (webRequest.isNetworkError)
                 {
-                    ServerLogger.LogError(webRequest.error);
                     serverAuthToken = null;
+                    ServerLogger.LogError(webRequest.error);
                     yield break;
                 }
 
-                serverAuthToken = webRequest.isHttpError ? null : webRequest.downloadHandler.text;
+                if (webRequest.isHttpError)
+                {
+                    serverAuthToken = null;
+                    ServerLogger.LogError(webRequest.error);
+                    yield break;
+                }
+
+                serverAuthToken = webRequest.downloadHandler.text;
+                ServerLogger.LogSuccess($"Received auth token.");
             }
         }
 
@@ -69,6 +88,6 @@ namespace Runtime.Services
             reader.Close();
             return pw;
         }
-#endif
     }
+#endif
 }

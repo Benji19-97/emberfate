@@ -1,4 +1,5 @@
-﻿using Runtime.UI;
+﻿using Runtime.Helpers;
+using Runtime.UI;
 using Steamworks;
 using UnityEngine;
 using UnityEngine.Events;
@@ -17,13 +18,13 @@ namespace Runtime.Core.Steam
         private void Awake()
         {
 #if UNITY_SERVER
+            ServerLogger.LogWarning("Destroying SteamInitializer.");
             Destroy(gameObject);
             return;
-#endif
-
-#if UNITY_EDITOR
+#elif UNITY_EDITOR
             if (GameServer.START_SERVER_IN_UNITY_EDITOR)
             {
+                ServerLogger.LogWarning("Destroying SteamInitializer.");
                 Destroy(gameObject);
                 return;
             }

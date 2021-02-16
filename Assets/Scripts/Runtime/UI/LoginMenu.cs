@@ -6,6 +6,7 @@ using Runtime.Services;
 using UnityEngine;
 using UnityEngine.UI;
 #if !UNITY_SERVER
+using Runtime.Core;
 using Steamworks;
 
 #endif
@@ -37,7 +38,8 @@ namespace Runtime.UI
 
         private void OnSelectServer(int idx)
         {
-            NetworkManager.singleton.networkAddress = ServerStatusService.Instance.serverStatus[idx].ip;
+            EmberfateNetworkManager.Instance.networkAddress = ServerStatusService.Instance.serverStatus[idx].ip;
+            EmberfateNetworkManager.Instance.GetComponent<TelepathyTransport>().port = ServerStatusService.Instance.serverStatus[idx].port;
             Debug.Log("Selected GS: " + ServerStatusService.Instance.serverStatus[idx].name);
         }
 

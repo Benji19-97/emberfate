@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Text;
 using Newtonsoft.Json;
 using Runtime.Core.Server;
@@ -17,15 +18,41 @@ namespace Runtime.Services
     {
         [HideInInspector] public UnityEvent serverStatusReceived;
         public static ServerStatusService Instance { get; private set; }
-
         public ServerStatus[] serverStatus { get; private set; }
 
+        #region Unity Event functions
+
+        private void Awake()
+        {
+            if (Instance == null)
+            {
+                Instance = this;
+                DontDestroyOnLoad(gameObject);
+            }
+            else
+            {
+                Destroy(this);
+            }
+        }
+
+        private void Start()
+        {
+#if UNITY_SERVER
+            return;
+#elif UNITY_EDITOR
+            if (GameServer.START_SERVER_IN_UNITY_EDITOR) return;
+#endif
+            SteamInitializer.Instance.initializedSteam.AddListener(OnSteamInitialized);
+        }
+
+        #endregion
+        
         private void OnSteamInitialized()
         {
             FetchServerStatus();
         }
 
-        public void FetchServerStatus()
+        private void FetchServerStatus()
         {
             StartCoroutine(FetchServerStatusCoroutine());
         }
@@ -55,52 +82,33 @@ namespace Runtime.Services
             }
         }
 
-        #region Unity Event functions
 
-        private void Awake()
-        {
-            if (Instance == null)
-            {
-                Instance = this;
-                DontDestroyOnLoad(gameObject);
-            }
-            else
-            {
-                Destroy(this);
-            }
-        }
-
-        private void Start()
-        {
-#if UNITY_SERVER
-            return;
-#elif UNITY_EDITOR
-            if (GameServer.START_SERVER_IN_UNITY_EDITOR) return;
-#endif
-            SteamInitializer.Instance.initializedSteam.AddListener(OnSteamInitialized);
-        }
-
-        #endregion
 
 #if UNITY_SERVER || UNITY_EDITOR
 
-        public void PostServerStatus(ServerStatus status)
+        public void UpdateServerStatus(ServerStatus status)
         {
-            StartCoroutine(PostServerStatusCoroutine(status));
+            StartCoroutine(UpdateServerStatusCoroutine(status));
         }
 
-        private IEnumerator PostServerStatusCoroutine(ServerStatus status, bool recursiveCall = false)
+        private IEnumerator UpdateServerStatusCoroutine(ServerStatus status, bool recursiveCall = false)
         {
-            var postDataJson = JsonConvert.SerializeObject(status);
+            ServerLogger.Log($"Started 'UpdateServerStatusCoroutine'. Args(conn: {status}, recursiveCall: {recursiveCall})");
+
+            string postDataJson;
+            try
+            {
+                postDataJson = JsonConvert.SerializeObject(status);
+            }
+            catch (Exception e)
+            {
+                ServerLogger.LogError(e.Message);
+                throw;
+            }
 
             using (var webRequest =
-                new UnityWebRequest(EndpointRegister.GetServerUpdateServerStatusUrl(ServerAuthenticationService.Instance.serverAuthToken), "POST"))
+                WebRequestHelper.GetPostRequest(EndpointRegister.GetServerUpdateServerStatusUrl(ServerAuthenticationService.Instance.serverAuthToken), postDataJson))
             {
-                var jsonToSend = new UTF8Encoding().GetBytes(postDataJson);
-                webRequest.uploadHandler = new UploadHandlerRaw(jsonToSend);
-                webRequest.downloadHandler = new DownloadHandlerBuffer();
-                webRequest.SetRequestHeader("Content-Type", "application/json");
-
                 yield return webRequest.SendWebRequest();
 
                 if (webRequest.isNetworkError)
@@ -115,12 +123,20 @@ namespace Runtime.Services
                     {
                         yield return StartCoroutine(ServerAuthenticationService.Instance.FetchAuthTokenCoroutine());
 
-                        if (ServerAuthenticationService.Instance.serverAuthToken != null) StartCoroutine(PostServerStatusCoroutine(status, true));
+                        if (ServerAuthenticationService.Instance.serverAuthToken != null)
+                        {
+                            StartCoroutine(UpdateServerStatusCoroutine(status, true));
+                            yield break;
+                        }
                     }
+                    
+                    ServerLogger.LogError(webRequest.error);
+                    yield break;
                 }
                 else
                 {
                     GameServer.Instance.StartServer();
+                    ServerLogger.LogSuccess($"Updated server status on DB. {status.status}");
                 }
             }
         }

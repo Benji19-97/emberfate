@@ -36,6 +36,7 @@ namespace Runtime.Services
         [Server]
         public IEnumerator FetchProfileCoroutine(NetworkConnection conn, string steamId, bool recursiveCall = false)
         {
+            ServerLogger.Log($"Started 'FetchProfileCoroutine'. Args(conn: {conn}, streamId: {steamId}, recursiveCall: {recursiveCall})");
             using (var webRequest =
                 UnityWebRequest.Get(EndpointRegister.GetServerFetchProfileUrl(steamId, ServerAuthenticationService.Instance.serverAuthToken)))
             {
@@ -53,30 +54,49 @@ namespace Runtime.Services
                     {
                         yield return StartCoroutine(ServerAuthenticationService.Instance.FetchAuthTokenCoroutine());
 
-                        if (ServerAuthenticationService.Instance.serverAuthToken != null) StartCoroutine(FetchProfileCoroutine(conn, steamId, true));
+                        if (ServerAuthenticationService.Instance.serverAuthToken != null)
+                        {
+                            StartCoroutine(FetchProfileCoroutine(conn, steamId, true));
+                            yield break;
+                        }
                     }
+
+                    ServerLogger.LogError(webRequest.error);
+                    yield break;
                 }
-                else
+
+                try
                 {
-                    try
-                    {
-                        ConnectionInfos[conn] = JsonConvert.DeserializeObject<Profile>(webRequest.downloadHandler.text);
-                    }
-                    catch (Exception e)
-                    {
-                        ServerLogger.LogError(e.Message);
-                        throw;
-                    }
+                    ConnectionInfos[conn] = JsonConvert.DeserializeObject<Profile>(webRequest.downloadHandler.text);
+                    ServerLogger.LogSuccess($"Fetched profile {steamId} of db.");
+                }
+                catch (Exception e)
+                {
+                    ServerLogger.LogError(e.Message);
+                    throw;
                 }
             }
         }
 
         [Server]
-        public IEnumerator UpsertProfileCoroutine(NetworkConnection connKey, bool removeAfter = false, bool recursiveCall = false)
+        public IEnumerator UpsertProfileCoroutine(NetworkConnection conn, bool removeProfilesConnectionAfter = false, bool recursiveCall = false)
         {
-            var attachedJson = JsonConvert.SerializeObject(ConnectionInfos[connKey]);
+            ServerLogger.Log(
+                $"Started 'UpsertProfileCoroutine'. Args(conn: {conn}, removeProfilesConnectionAfter: {removeProfilesConnectionAfter}, recursiveCall: {recursiveCall})");
+
+            string attachedJson;
+            try
+            {
+                attachedJson = JsonConvert.SerializeObject(ConnectionInfos[conn]);
+            }
+            catch (Exception e)
+            {
+                ServerLogger.LogError(e.Message);
+                throw;
+            }
+
             using (var webRequest = WebRequestHelper.GetPostRequest(
-                EndpointRegister.GetServerUpsertProfileUrl(ConnectionInfos[connKey].steamId, ServerAuthenticationService.Instance.serverAuthToken),
+                EndpointRegister.GetServerUpsertProfileUrl(ConnectionInfos[conn].steamId, ServerAuthenticationService.Instance.serverAuthToken),
                 attachedJson))
             {
                 yield return webRequest.SendWebRequest();
@@ -93,13 +113,37 @@ namespace Runtime.Services
                     {
                         yield return StartCoroutine(ServerAuthenticationService.Instance.FetchAuthTokenCoroutine());
 
-                        if (ServerAuthenticationService.Instance.serverAuthToken != null) StartCoroutine(UpsertProfileCoroutine(connKey, removeAfter, true));
+                        if (ServerAuthenticationService.Instance.serverAuthToken != null)
+                        {
+                            StartCoroutine(UpsertProfileCoroutine(conn, removeProfilesConnectionAfter, true));
+                            yield break;
+                        }
+                    }
+                    
+                    ServerLogger.LogError(webRequest.error);
+                    yield break;
+                }
+
+                try
+                {
+                    var steamId = ConnectionInfos[conn].steamId;
+
+                    if (removeProfilesConnectionAfter)
+                    {
+                        ConnectionInfos.Remove(conn);
+                        ServerLogger.LogSuccess($"Upserted profile of {steamId} to db and removed connection afterwards.");
+                    }
+                    else
+                    {
+                        ServerLogger.LogSuccess($"Upserted profile of {steamId} to db.");
                     }
                 }
-                else
+                catch (Exception e)
                 {
-                    if (removeAfter) ConnectionInfos.Remove(connKey);
+                    ServerLogger.LogError(webRequest.error);
+                    throw;
                 }
+
             }
         }
     }

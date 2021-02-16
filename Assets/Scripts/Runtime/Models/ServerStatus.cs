@@ -10,6 +10,6 @@ namespace Runtime.Models
         public int maxConnections;
         public string location;
         public string ip;
-        public int port;
+        public ushort port;
     }
 }

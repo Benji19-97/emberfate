@@ -181,7 +181,6 @@ namespace Runtime.Services
                 if (webRequest.isNetworkError)
                 {
                     ServerLogger.LogError(webRequest.error);
-
                     yield break;
                 }
 
@@ -192,7 +191,10 @@ namespace Runtime.Services
                         yield return StartCoroutine(ServerAuthenticationService.Instance.FetchAuthTokenCoroutine());
 
                         if (ServerAuthenticationService.Instance.serverAuthToken != null)
+                        {
                             StartCoroutine(ServerFetchCharacterCoroutine(conn, characterId, true));
+                            yield break;
+                        }
                     }
 
                     ServerLogger.LogError(webRequest.error);
@@ -200,7 +202,6 @@ namespace Runtime.Services
                 else
                 {
                     ProfileService.Instance.ConnectionInfos[conn].PlayingCharacter = Character.Deserialize(webRequest.downloadHandler.text);
-
                     ServerLogger.LogSuccess($"Received and deserialized {ProfileService.Instance.ConnectionInfos[conn].PlayingCharacter.name} for {conn}");
                 }
             }
@@ -232,11 +233,14 @@ namespace Runtime.Services
             try
             {
                 if (ProfileService.Instance.ConnectionInfos[conn].PlayingCharacter != null)
+                {
                     conn.Send(new CharacterCreationResponse
                     {
                         Code = 403,
                         Message = "You cannot perform this operation while playing a character."
                     });
+                    ServerLogger.LogWarning($"{conn} tried creating a character while playing.");
+                }
 
                 var profile = ProfileService.Instance.ConnectionInfos[conn];
 
@@ -245,14 +249,17 @@ namespace Runtime.Services
                 if (profile.characters.Length >= profile.maxCharacterCount)
                 {
                     failMessage = "Reached Character Count Limit";
+                    ServerLogger.LogWarning($"{conn} tried creating a character but has reached character limit.");
                 }
-                else if (msg.Name.Length <= 1)
+                else if (msg.Name.Length < 3 || msg.Name.Length > 30)
                 {
                     failMessage = "Invalid Character Name";
+                    ServerLogger.LogWarning($"{conn} tried creating a character but character name was invalid.");
                 }
                 else if (!Character.Classes.Contains(msg.Class))
                 {
                     failMessage = "Invalid Character Class";
+                    ServerLogger.LogWarning($"{conn} tried creating a character but character class was invalid.");
                 }
                 else
                 {
@@ -265,6 +272,7 @@ namespace Runtime.Services
                     return;
                 }
 
+                ServerLogger.Log($"Creating character failed. Sending negative response to {conn}");
                 conn.Send(new CharacterCreationResponse
                 {
                     Code = ResponseCodeError,
@@ -274,7 +282,6 @@ namespace Runtime.Services
             catch (Exception e)
             {
                 ServerLogger.LogError(e.Message);
-
                 throw;
             }
         }
@@ -318,9 +325,11 @@ namespace Runtime.Services
                         Code = ResponseCodeError,
                         Message = "Failed to create character."
                     });
+                    ServerLogger.LogError(webRequest.error);
                     yield break;
                 }
 
+                ServerLogger.LogSuccess($"Created character. Sending confirmation response to {conn}");
                 conn.Send(new CharacterCreationResponse
                 {
                     Code = ResponseCodeOk,
@@ -369,11 +378,14 @@ namespace Runtime.Services
             try
             {
                 if (ProfileService.Instance.ConnectionInfos[conn].PlayingCharacter != null)
+                {
                     conn.Send(new CharacterCreationResponse
                     {
                         Code = 403,
                         Message = "You cannot perform this operation while playing a character."
                     });
+                    ServerLogger.LogWarning($"{conn} tried deleting a character while playing.");
+                }
 
                 var connectionInfo = ProfileService.Instance.ConnectionInfos[conn];
 
@@ -382,7 +394,6 @@ namespace Runtime.Services
             catch (Exception e)
             {
                 ServerLogger.LogError(e.Message);
-
                 throw;
             }
         }
@@ -421,9 +432,11 @@ namespace Runtime.Services
                         Code = ResponseCodeError,
                         Message = "Couldn't delete character."
                     });
+                    ServerLogger.LogError(webRequest.error);
                     yield break;
                 }
 
+                ServerLogger.LogSuccess($"Deleted character. Sending confirmation response to {conn}");
                 conn.Send(new CharacterCreationResponse
                 {
                     Code = ResponseCodeOk,
@@ -469,12 +482,14 @@ namespace Runtime.Services
             try
             {
                 if (ProfileService.Instance.ConnectionInfos[conn].PlayingCharacter != null)
+                {
                     conn.Send(new CharacterPlayResponse
                     {
                         Code = 403,
                         Message = "You cannot perform this operation while playing a character."
                     });
-
+                    ServerLogger.LogWarning($"{conn} tried playing a character while playing.");
+                }
 
                 foreach (var characterInfo in ProfileService.Instance.ConnectionInfos[conn].characters)
                 {
@@ -501,11 +516,15 @@ namespace Runtime.Services
             try
             {
                 if (ProfileService.Instance.ConnectionInfos[conn].PlayingCharacter == null)
+                {
                     conn.Send(new CharacterPlayResponse
                     {
                         Code = 400,
                         Message = "Cannot find character."
                     });
+                    ServerLogger.LogWarning($"{conn} tried playing a character but character couldn't be found.");
+                    yield break;
+                }
 
                 var player = InstantiatePlayerCharacter(conn);
                 var identity = player.GetComponent<NetworkIdentity>();
@@ -516,6 +535,8 @@ namespace Runtime.Services
                     Code = 200,
                     Message = "Ok"
                 });
+                ServerLogger.LogSuccess($"{conn} is now playing character. Sending confirmation response to {conn}");
+
             }
             catch (Exception e)
             {
@@ -543,23 +564,7 @@ namespace Runtime.Services
 
         #region Update Character
 
-        [Server]
-        public void UpdateCharacterOnDatabase(NetworkConnection conn, Character character)
-        {
-            ServerLogger.Log($"Updating {character.id} on database from {conn}.");
-
-            try
-            {
-                StartCoroutine(UpdateCharacterOnDatabaseCoroutine(character));
-            }
-            catch (Exception e)
-            {
-                ServerLogger.LogError(e.Message);
-                throw;
-            }
-        }
-
-        private IEnumerator UpdateCharacterOnDatabaseCoroutine(Character character, bool recursiveCall = false)
+        public IEnumerator UpdateCharacterOnDatabaseCoroutine(Character character, bool recursiveCall = false)
         {
             ServerLogger.Log($"Started 'UpdateCharacterOnDatabaseCoroutine'. Args(character: {character}, recursiveCall: {recursiveCall})");
             
@@ -575,7 +580,7 @@ namespace Runtime.Services
 
                 if (webRequest.isNetworkError)
                 {
-                    ServerLogger.LogError(webRequest.error);
+                    ServerLogger.LogError($"Failed to update character due to network error {character.id}. {webRequest.error}");
                     yield break;
                 }
 
@@ -592,7 +597,7 @@ namespace Runtime.Services
                         }
                     }
 
-                    ServerLogger.LogError($"Failed to update character {character.id}. {webRequest.error}");
+                    ServerLogger.LogError($"Failed to update character due to http error {character.id}. {webRequest.error}");
                     yield break;
                 }
                 
