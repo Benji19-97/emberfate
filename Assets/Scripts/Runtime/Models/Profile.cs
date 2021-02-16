@@ -34,12 +34,15 @@ namespace Runtime.Models
         
         public static Profile Deserialize(string json)
         {
+            // ServerLogger.LogWarning("Deserializing profile: " + json);
+            
             var jObject = JObject.Parse(json);
             var profile = new Profile()
             {
                 steamId = (string) jObject["steamId"],
                 name = (string) jObject["name"],
                 maxCharacterCount = Convert.ToByte(jObject["maxCharacterCount"]),
+                characters =  jObject["characters"].ToObject<CharacterInfo[]>(),
                 currencyAmount = Convert.ToInt32(jObject["currencyAmount"]),
                 stash = Stash.Deserialize(jObject["stash"]?["data"]?.ToObject<byte[]>()),
                 @private = Convert.ToBoolean(jObject["private"])

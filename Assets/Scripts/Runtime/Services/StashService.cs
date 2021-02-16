@@ -14,7 +14,7 @@ namespace Runtime.Services
     {
         public static StashService Instance;
 
-        #region Unity Event function
+        #region Unity Event functions
 
         private void Awake()
         {
