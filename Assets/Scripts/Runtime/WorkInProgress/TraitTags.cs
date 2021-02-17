@@ -15,6 +15,7 @@
         Melee,
         Ranged,
         Projectile,
-        Speed
+        Speed,
+        Life
     }
 }

@@ -22,7 +22,7 @@ namespace Runtime.WorkInProgress
         OffHand
     }
     
-    public class TraitHolder
+    public class TraitListContainer
     {
         public UnityEvent TraitsChangedEvent = new UnityEvent();
         
