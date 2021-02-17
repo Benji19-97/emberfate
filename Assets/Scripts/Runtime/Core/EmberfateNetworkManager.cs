@@ -8,6 +8,7 @@ using Runtime.Helpers;
 using Runtime.Services;
 using Runtime.UI.Managers;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace Runtime.Core
 {
@@ -51,6 +52,13 @@ namespace Runtime.Core
             base.OnClientConnect(conn);
         }
 
+        public override void OnStartClient()
+        {
+            Debug.Log("Started client");
+            FlexSceneManager.ResetInitialLoad();
+            base.OnStartClient();
+        }
+
         [Client]
         public void Disconnect()
         {
@@ -58,7 +66,15 @@ namespace Runtime.Core
             MainMenuUiManager.Instance.loginMenu.SetActive(true);
             MainMenuUiManager.Instance.characterSelectionMenu.SetActive(false);
         }
-        
+
+
+        public override void OnClientDisconnect(NetworkConnection conn)
+        {
+            StopClient();
+            SceneManager.LoadScene("MainMenu");
+            base.OnClientDisconnect(conn);
+        }
+
 #endif
 
 #if UNITY_SERVER || UNITY_EDITOR

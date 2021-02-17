@@ -6,15 +6,16 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using Runtime.Helpers;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
 namespace FirstGearGames.FlexSceneManager
 {
-
     public class FlexSceneManager : MonoBehaviour
     {
         #region Types.
+
         /// <summary>
         /// Data about a scene which is to be loaded. Generated when processing scene queue data.
         /// </summary>
@@ -29,76 +30,98 @@ namespace FirstGearGames.FlexSceneManager
             public readonly string SceneName;
             public readonly LoadSceneMode LoadMode;
         }
+
         #endregion
 
         #region Public.
+
         /// <summary>
         /// Dispatched when a scene change queue has begun. This will only call if a scene has succesfully begun to load or unload. The queue may process any number of scene events. For example: if a scene is told to unload while a load is still in progress, then the unload will be placed in the queue.
         /// </summary>
         public static event Action OnSceneQueueStart;
+
         /// <summary>
         /// Dispatched when the scene queue is emptied.
         /// </summary>
         public static event Action OnSceneQueueEnd;
+
         /// <summary>
         /// Dispatched when a scene load starts.
         /// </summary>
         public static event Action<LoadSceneStartEventArgs> OnLoadSceneStart;
+
         /// <summary>
         /// Dispatched when completion percentage changes while loading a scene. Value is between 0f and 1f, while 1f is 100% done. Can be used for custom progress bars when loading scenes.
         /// </summary>
         public static event Action<LoadScenePercentEventArgs> OnLoadScenePercentChange;
+
         /// <summary>
         /// Dispatched when a scene load ends.
         /// </summary>
         public static event Action<LoadSceneEndEventArgs> OnLoadSceneEnd;
+
         /// <summary>
         /// Dispatched when a scene load starts.
         /// </summary>
         public static event Action<UnloadSceneStartEventArgs> OnUnloadSceneStart;
+
         /// <summary>
         /// Dispatched when a scene load ends.
         /// </summary>
         public static event Action<UnloadSceneEndEventArgs> OnUnloadSceneEnd;
+
         /// <summary>
         /// Dispatched before the server rebuilds observers when the clients presence changes for a scene.
         /// </summary>
         public static event Action<ClientPresenceChangeEventArgs> OnClientPresenceChangeStart;
+
         /// <summary>
         /// Dispatched after the server rebuilds observers when the clients presence changes for a scene.
         /// </summary>
         public static event Action<ClientPresenceChangeEventArgs> OnClientPresenceChangeEnd;
+
         #endregion
 
         #region Private.
+
         /// <summary>
         /// Singleton reference of this script.
         /// </summary>
         private static FlexSceneManager _instance;
+
         /// <summary>
         /// Scenes which are currently loaded as networked scenes. All players should have networked scenes loaded.
         /// </summary>
         private NetworkedScenesData _networkedScenes = new NetworkedScenesData();
+
         /// <summary>
         /// Scenes to load or unload, in order.
         /// </summary>
         private List<object> _queuedSceneOperations = new List<object>();
+
         /// <summary>
         /// Collection of FlexSceneCheckers that are currently enabled. This data only exist on server.
         /// </summary>
         private HashSet<FlexSceneChecker> _sceneCheckers = new HashSet<FlexSceneChecker>();
+
         /// <summary>
         /// 
         /// </summary>
         private Dictionary<Scene, HashSet<NetworkConnection>> _sceneConnections = new Dictionary<Scene, HashSet<NetworkConnection>>();
+
         /// <summary>
         /// Scenes which connections are registered as existing.
         /// </summary>
-        public static Dictionary<Scene, HashSet<NetworkConnection>> SceneConnections { get { return _instance._sceneConnections; } }
+        public static Dictionary<Scene, HashSet<NetworkConnection>> SceneConnections
+        {
+            get { return _instance._sceneConnections; }
+        }
+
         /// <summary>
         /// Scenes which must be manually unloaded, even when emptied.
         /// </summary>
         private HashSet<Scene> _manualUnloadScenes = new HashSet<Scene>();
+
         /// <summary>
         /// Scene containing moved objects when changing single scene. On client this will contain all objects moved until the server destroys them.
         /// Mirror only sends spawn messages once per-client, per server side scene load. If a scene load is performed only for specific connections
@@ -107,10 +130,12 @@ namespace FirstGearGames.FlexSceneManager
         /// While on server only this scene contains objects being moved temporarily, before being moved to the new scene.
         /// </summary>
         private Scene _movedObjectsScene;
+
         /// <summary>
         /// Becomes true when client receives the initial scene load message.
         /// </summary>
         private bool _receivedInitialLoad = false;
+
         /// <summary>
         /// Default value for auto create player.
         /// When FlexSceneManager starts it will set autoCreatePlayer to false,
@@ -118,17 +143,21 @@ namespace FirstGearGames.FlexSceneManager
         /// load the player will be spawned in if autoCreatePlayer was previously true.
         /// </summary>
         private bool _defaultAutoCreatePlayer;
+
         /// <summary>
         /// Becomes true when when a scene first successfully begins to load or unload. Value is reset to false when the scene queue is emptied.
         /// </summary>
         private bool _sceneQueueStartInvoked = false;
+
         /// <summary>
         /// True once NetworkManage singleton is found.
         /// </summary>
         private bool _networkManagerFound = false;
+
         #endregion
 
         #region Unity callbacks and initialization.
+
         /// <summary>
         /// Initializes this script for use. Should only be completed once.
         /// </summary>
@@ -196,6 +225,7 @@ namespace FirstGearGames.FlexSceneManager
                 if (string.IsNullOrEmpty(s.name))
                     _networkedScenes.Single = string.Empty;
             }
+
             //Additive.
             if (_networkedScenes.Additive.Length > 0)
             {
@@ -210,6 +240,7 @@ namespace FirstGearGames.FlexSceneManager
                             additives.Add(_networkedScenes.Additive[i]);
                     }
                 }
+
                 //Set additive to reconstructed list.
                 _networkedScenes.Additive = additives.ToArray();
             }
@@ -236,6 +267,7 @@ namespace FirstGearGames.FlexSceneManager
                 NetworkServer.UnregisterHandler<ClientPlayerCreated>();
             }
         }
+
         /// <summary>
         /// Finds the NetworkManager so that FlexSceneManager can configure autoCreate player.
         /// </summary>
@@ -256,12 +288,15 @@ namespace FirstGearGames.FlexSceneManager
                 bool sceneCheckFailed = false;
                 if (nm.offlineScene != null && nm.offlineScene.Length > 0)
                 {
-                    Debug.LogError("While using FlexSceneManager OfflineScene should be empty within your NetworkManager. Please make these changes before running your project.");
+                    Debug.LogError(
+                        "While using FlexSceneManager OfflineScene should be empty within your NetworkManager. Please make these changes before running your project.");
                     sceneCheckFailed = true;
                 }
+
                 if (nm.onlineScene != null && nm.onlineScene.Length > 0)
                 {
-                    Debug.LogError("While using FlexSceneManager OnlineScene should be empty within your NetworkManager. Please make these changes before running your project.");
+                    Debug.LogError(
+                        "While using FlexSceneManager OnlineScene should be empty within your NetworkManager. Please make these changes before running your project.");
                     sceneCheckFailed = true;
                 }
 
@@ -274,9 +309,11 @@ namespace FirstGearGames.FlexSceneManager
                 _networkManagerFound = true;
             }
         }
+
         #endregion
 
         #region Synchronizing late joiners.
+
         /// <summary>
         /// Called when a client connects to the server, after authentication.
         /// </summary>
@@ -346,9 +383,11 @@ namespace FirstGearGames.FlexSceneManager
             else
                 OnLoadScenes(null, msg);
         }
+
         #endregion
 
         #region Player disconnect.
+
         /// <summary>
         /// Received when a player disconnects from the server.
         /// </summary>
@@ -358,6 +397,7 @@ namespace FirstGearGames.FlexSceneManager
         {
             _instance.OnServerDisconnectInternal(conn);
         }
+
         /// <summary>
         /// 
         /// </summary>
@@ -397,12 +437,14 @@ namespace FirstGearGames.FlexSceneManager
                     SceneReferenceDatas = unloadSceneReferenceDatas.ToArray()
                 };
 
-                UnloadConnectionScenes(new NetworkConnection[] { null }, asd);
+                UnloadConnectionScenes(new NetworkConnection[] {null}, asd);
             }
         }
+
         #endregion
 
         #region Player creation.
+
         /// <summary>
         /// Called on the client to tell the server when the client's player has been created. Typically called after performing ClientScene.AddPlayer().
         /// </summary>
@@ -410,6 +452,7 @@ namespace FirstGearGames.FlexSceneManager
         {
             _instance.SendPlayerCreatedInternal();
         }
+
         /// <summary>
         /// Called on the client to tell the server when the client's player has been created. Typically called after performing ClientScene.AddPlayer().
         /// </summary>
@@ -417,6 +460,7 @@ namespace FirstGearGames.FlexSceneManager
         {
             NetworkClient.Send(new ClientPlayerCreated());
         }
+
         /// <summary>
         /// Resets that initial load has been completed. Must be called when connecting to reset that initial scenes have been loaded, as well to register messages again.
         /// </summary>
@@ -426,9 +470,11 @@ namespace FirstGearGames.FlexSceneManager
             _instance._receivedInitialLoad = false;
             _instance.ChangeMessageSubscriptions(true);
         }
+
         #endregion
 
         #region Server received messages.
+
         /// <summary>
         /// Received on the server immediately after the client request their player to be spawned.
         /// </summary>
@@ -450,6 +496,7 @@ namespace FirstGearGames.FlexSceneManager
                 if (!string.IsNullOrEmpty(s.name))
                     AddToScene(s, conn);
             }
+
             if (_networkedScenes.Additive != null)
             {
                 for (int i = 0; i < _networkedScenes.Additive.Length; i++)
@@ -460,6 +507,7 @@ namespace FirstGearGames.FlexSceneManager
                 }
             }
         }
+
         /// <summary>
         /// Received on server when a client loads scenes.
         /// </summary>
@@ -490,9 +538,11 @@ namespace FirstGearGames.FlexSceneManager
             for (int i = 0; i < scenesLoaded.Count; i++)
                 AddToScene(scenesLoaded[i], conn);
         }
+
         #endregion
 
         #region Events.
+
         /// <summary>
         /// Checks if OnQueueStart should invoke, and if so invokes.
         /// </summary>
@@ -504,6 +554,7 @@ namespace FirstGearGames.FlexSceneManager
             _sceneQueueStartInvoked = true;
             OnSceneQueueStart?.Invoke();
         }
+
         /// <summary>
         /// Checks if OnQueueEnd should invoke, and if so invokes.
         /// </summary>
@@ -515,6 +566,7 @@ namespace FirstGearGames.FlexSceneManager
             _sceneQueueStartInvoked = false;
             OnSceneQueueEnd?.Invoke();
         }
+
         /// <summary>
         /// Invokes that a scene load has started. Only called when valid scenes will be loaded.
         /// </summary>
@@ -524,6 +576,7 @@ namespace FirstGearGames.FlexSceneManager
             TryInvokeOnQueueStart();
             OnLoadSceneStart?.Invoke(new LoadSceneStartEventArgs(sqd));
         }
+
         /// <summary>
         /// Invokes that a scene load has ended. Only called after a valid scene has loaded.
         /// </summary>
@@ -539,6 +592,7 @@ namespace FirstGearGames.FlexSceneManager
             LoadSceneEndEventArgs args = new LoadSceneEndEventArgs(sqd, loadedScenes.ToArray(), skippedScenes.ToArray());
             OnLoadSceneEnd?.Invoke(args);
         }
+
         /// <summary>
         /// Invokes that a scene unload has started. Only called when valid scenes will be unloaded.
         /// </summary>
@@ -548,6 +602,7 @@ namespace FirstGearGames.FlexSceneManager
             TryInvokeOnQueueStart();
             OnUnloadSceneStart?.Invoke(new UnloadSceneStartEventArgs(sqd));
         }
+
         /// <summary>
         /// Invokes that a scene unload has ended. Only called after a valid scene has unloaded.
         /// </summary>
@@ -556,6 +611,7 @@ namespace FirstGearGames.FlexSceneManager
         {
             OnUnloadSceneEnd?.Invoke(new UnloadSceneEndEventArgs(sqd));
         }
+
         /// <summary>
         /// Invokes when completion percentage changes while unloading or unloading a scene. Value is between 0f and 1f, while 1f is 100% done.
         /// </summary>
@@ -565,9 +621,11 @@ namespace FirstGearGames.FlexSceneManager
             value = Mathf.Clamp(value, 0f, 1f);
             OnLoadScenePercentChange?.Invoke(new LoadScenePercentEventArgs(sqd, value));
         }
+
         #endregion
 
         #region Scene queue processing.
+
         /// <summary>
         /// Processes queued scene operations.
         /// </summary>
@@ -609,9 +667,11 @@ namespace FirstGearGames.FlexSceneManager
 
             TryInvokeOnQueueEnd();
         }
+
         #endregion
 
         #region LoadScenes
+
         /// <summary>
         /// Loads scenes on the server and for all clients. Future clients will automatically load these scenes.
         /// </summary>
@@ -622,6 +682,7 @@ namespace FirstGearGames.FlexSceneManager
         {
             _instance.LoadScenesInternal(SceneScopeTypes.Networked, null, singleScene, additiveScenes, new LoadOptions(), _instance._networkedScenes, true);
         }
+
         /// <summary>
         /// Loads scenes on server and tells connections to load them as well. Other connections will not load this scene.
         /// </summary>
@@ -630,10 +691,12 @@ namespace FirstGearGames.FlexSceneManager
         /// <param name="additiveScenes">Additive scenes to load. Use null to opt-out of additive scene loading.</param>
         /// <param name="loadOptions">Additional LoadOptions for this action.</param>
         [Server]
-        public static void LoadConnectionScenes(NetworkConnection conn, SingleSceneData singleScene, AdditiveScenesData additiveScenes, LoadOptions loadOptions = null)
+        public static void LoadConnectionScenes(NetworkConnection conn, SingleSceneData singleScene, AdditiveScenesData additiveScenes,
+            LoadOptions loadOptions = null)
         {
-            LoadConnectionScenes(new NetworkConnection[] { conn }, singleScene, additiveScenes, loadOptions);
+            LoadConnectionScenes(new NetworkConnection[] {conn}, singleScene, additiveScenes, loadOptions);
         }
+
         /// <summary>
         /// Loads scenes on server and tells connections to load them as well. Other connections will not load this scene.
         /// </summary>
@@ -641,20 +704,23 @@ namespace FirstGearGames.FlexSceneManager
         /// <param name="singleScene">Single scene to load. Use null to opt-out of single scene loading.</param>
         /// <param name="additiveScenes">Additive scenes to load. Use null to opt-out of additive scene loading.</param>
         [Server]
-        public static void LoadConnectionScenes(NetworkConnection[] conns, SingleSceneData singleScene, AdditiveScenesData additiveScenes, LoadOptions loadOptions = null)
+        public static void LoadConnectionScenes(NetworkConnection[] conns, SingleSceneData singleScene, AdditiveScenesData additiveScenes,
+            LoadOptions loadOptions = null)
         {
             if (loadOptions == null)
                 loadOptions = new LoadOptions();
 
             _instance.LoadScenesInternal(SceneScopeTypes.Connections, conns, singleScene, additiveScenes, loadOptions, _instance._networkedScenes, true);
         }
+
         /// <summary>
         /// 
         /// </summary>
         /// <param name="singleScene"></param>
         /// <param name="additiveScenes"></param>
         /// <param name="asServer"></param>
-        private void LoadScenesInternal(SceneScopeTypes scope, NetworkConnection[] conns, SingleSceneData singleScene, AdditiveScenesData additiveScenes, LoadOptions loadOptions, NetworkedScenesData networkedScenes, bool asServer)
+        private void LoadScenesInternal(SceneScopeTypes scope, NetworkConnection[] conns, SingleSceneData singleScene, AdditiveScenesData additiveScenes,
+            LoadOptions loadOptions, NetworkedScenesData networkedScenes, bool asServer)
         {
             //Add to scene queue data.        
             _queuedSceneOperations.Add(new LoadSceneQueueData(scope, conns, singleScene, additiveScenes, loadOptions, networkedScenes, asServer));
@@ -672,6 +738,7 @@ namespace FirstGearGames.FlexSceneManager
         /// <returns></returns>
         private IEnumerator __LoadScenes()
         {
+            Debug.Log("Method started");
             LoadSceneQueueData sqd = _queuedSceneOperations[0] as LoadSceneQueueData;
             RemoveInvalidSceneQueueData(ref sqd);
             /* No single or additive scene data. They were
@@ -776,6 +843,7 @@ namespace FirstGearGames.FlexSceneManager
                     else
                         singleScene = TryAddToServerSceneDatas(sqd.AsServer, sqd.SingleScene.SceneReferenceData, ref singleSceneReferenceData);
                 }
+
                 //Add additives.
                 if (sqd.AdditiveScenes != null)
                 {
@@ -862,10 +930,12 @@ namespace FirstGearGames.FlexSceneManager
                                     break;
                                 }
                             }
+
                             //If not in moved objects then add to destroy.
                             if (!inMovedObjects && objId.GetComponent<FlexSceneChecker>() != null)
                                 netIdsToDestroy.Add(objId);
                         }
+
                         //Destroy objects as required.
                         for (int i = 0; i < netIdsToDestroy.Count; i++)
                             NetworkServer.Destroy(netIdsToDestroy[i].gameObject);
@@ -940,7 +1010,7 @@ namespace FirstGearGames.FlexSceneManager
                         s.name != _movedObjectsScene.name &&
                         !inSceneQueueData &&
                         CanUnloadScene(s.name, sqd.NetworkedScenes)
-                        );
+                    );
                     //If not scene being changed to and not the object holder scene.
                     if (canUnload)
                         unloadableScenes.Add(s);
@@ -979,7 +1049,7 @@ namespace FirstGearGames.FlexSceneManager
                     /* How much percentage each scene load can be worth
                      * at maximum completion. EG: if there are two scenes
                      * 1f / 2f is 0.5f. */
-                    float maximumIndexWorth = (1f / (float)loadableScenes.Count);
+                    float maximumIndexWorth = (1f / (float) loadableScenes.Count);
                     /* Total percent will be how much percentage is complete
                      * in total. Initialize it with a value based on how many
                      * scenes are already fully loaded. */
@@ -1014,6 +1084,7 @@ namespace FirstGearGames.FlexSceneManager
                     additiveSceneReferenceDatas.Add(sd);
                 }
             }
+
             //When all scenes are loaded invoke with 100% done.
             InvokeOnScenePercentChange(sqd, 1f);
 
@@ -1082,7 +1153,9 @@ namespace FirstGearGames.FlexSceneManager
                     for (int i = 0; i < sqd.Connections.Length; i++)
                     {
                         if (sqd.Connections[i] != null)
+                        {
                             sqd.Connections[i].Send(msg);
+                        }
                     }
                 }
             }
@@ -1098,6 +1171,8 @@ namespace FirstGearGames.FlexSceneManager
                 };
                 NetworkClient.Send(msg);
             }
+
+            Debug.Log("Method ran to end :)");
 
             InvokeOnSceneLoadEnd(sqd, requestedLoadScenes, loadedScenes);
         }
@@ -1139,6 +1214,7 @@ namespace FirstGearGames.FlexSceneManager
             /* Fall through, scene or ref data couldn't be found or made. */
             return new Scene();
         }
+
         /// <summary>
         /// Returns a scene using reference data.
         /// </summary>
@@ -1194,12 +1270,15 @@ namespace FirstGearGames.FlexSceneManager
         [Client]
         private void OnLoadScenes(NetworkConnection conn, LoadScenesMessage msg)
         {
+            Debug.Log("Got scene load for " + msg.SceneQueueData.SingleScene.SceneReferenceData.Name); //TODO-BB: Delete later
             LoadSceneQueueData sqd = msg.SceneQueueData;
             LoadScenesInternal(sqd.ScopeType, null, sqd.SingleScene, sqd.AdditiveScenes, new LoadOptions(), sqd.NetworkedScenes, false);
         }
+
         #endregion
 
         #region UnloadScenes.
+
         /// <summary>
         /// Unloads additive scenes on the server and for all clients.
         /// </summary>
@@ -1210,6 +1289,7 @@ namespace FirstGearGames.FlexSceneManager
             AdditiveScenesData asd = new AdditiveScenesData(additiveScenes);
             UnloadNetworkedScenes(asd);
         }
+
         /// <summary>
         /// Unloads additive scenes on the server and for all clients.
         /// </summary>
@@ -1219,6 +1299,7 @@ namespace FirstGearGames.FlexSceneManager
         {
             _instance.UnloadScenesInternal(SceneScopeTypes.Networked, null, additiveScenes, new UnloadOptions(), _instance._networkedScenes, true);
         }
+
         /// <summary>
         /// Unloads scenes on server and tells a connection to unload them as well. Other connections will not unload this scene.
         /// </summary>
@@ -1228,8 +1309,9 @@ namespace FirstGearGames.FlexSceneManager
         [Server]
         public static void UnloadConnectionScenes(NetworkConnection conn, string[] additiveScenes, UnloadOptions unloadOptions = null)
         {
-            UnloadConnectionScenes(new NetworkConnection[] { conn }, additiveScenes, unloadOptions);
+            UnloadConnectionScenes(new NetworkConnection[] {conn}, additiveScenes, unloadOptions);
         }
+
         /// <summary>
         /// Unloads scenes on server and tells connections to unload them as well. Other connections will not unload this scene.
         /// </summary>
@@ -1241,6 +1323,7 @@ namespace FirstGearGames.FlexSceneManager
             AdditiveScenesData asd = new AdditiveScenesData(additiveScenes);
             UnloadConnectionScenes(conns, asd, unloadOptions);
         }
+
         /// <summary>
         /// Unloads scenes on server and tells connections to unload them as well. Other connections will not unload this scene.
         /// </summary>
@@ -1249,8 +1332,9 @@ namespace FirstGearGames.FlexSceneManager
         [Server]
         public static void UnloadConnectionScenes(NetworkConnection conn, AdditiveScenesData additiveScenes, UnloadOptions unloadOptions = null)
         {
-            UnloadConnectionScenes(new NetworkConnection[] { conn }, additiveScenes, unloadOptions);
+            UnloadConnectionScenes(new NetworkConnection[] {conn}, additiveScenes, unloadOptions);
         }
+
         /// <summary>
         /// Unloads scenes on server and tells connections to unload them as well. Other connections will not unload this scene.
         /// </summary>
@@ -1264,6 +1348,7 @@ namespace FirstGearGames.FlexSceneManager
 
             _instance.UnloadScenesInternal(SceneScopeTypes.Connections, conns, additiveScenes, unloadOptions, _instance._networkedScenes, true);
         }
+
         /// <summary>
         /// 
         /// </summary>
@@ -1271,7 +1356,8 @@ namespace FirstGearGames.FlexSceneManager
         /// <param name="conns"></param>
         /// <param name="additiveScenes"></param>
         /// <param name="asServer"></param>
-        private void UnloadScenesInternal(SceneScopeTypes scope, NetworkConnection[] conns, AdditiveScenesData additiveScenes, UnloadOptions unloadOptions, NetworkedScenesData networkedScenes, bool asServer)
+        private void UnloadScenesInternal(SceneScopeTypes scope, NetworkConnection[] conns, AdditiveScenesData additiveScenes, UnloadOptions unloadOptions,
+            NetworkedScenesData networkedScenes, bool asServer)
         {
             _queuedSceneOperations.Add(new UnloadSceneQueueData(scope, conns, additiveScenes, unloadOptions, networkedScenes, asServer));
             /* If only one entry then scene operations are not currently in progress.
@@ -1398,7 +1484,7 @@ namespace FirstGearGames.FlexSceneManager
                         unusedScene &&
                         s.name != _movedObjectsScene.name &&
                         CanUnloadScene(s, sqd.NetworkedScenes)
-                        );
+                    );
 
                     if (canUnload)
                         unloadableScenes.Add(s);
@@ -1468,6 +1554,7 @@ namespace FirstGearGames.FlexSceneManager
 
             InvokeOnSceneUnloadEnd(sqd);
         }
+
         /// <summary>
         /// Received on clients when networked scenes must be unloaded.
         /// </summary>
@@ -1478,9 +1565,11 @@ namespace FirstGearGames.FlexSceneManager
             UnloadSceneQueueData sqd = msg.SceneQueueData;
             UnloadScenesInternal(sqd.ScopeType, sqd.Connections, sqd.AdditiveScenes, new UnloadOptions(), sqd.NetworkedScenes, false);
         }
+
         #endregion
 
         #region Add scene checkers.
+
         /// <summary>
         /// Adds a FlexSceneChecker to SceneCheckers.
         /// </summary>
@@ -1489,6 +1578,7 @@ namespace FirstGearGames.FlexSceneManager
         {
             _instance._sceneCheckers.Add(checker);
         }
+
         /// <summary>
         /// Sets a connection as being in a scene and updates FlexSceneCheckers.
         /// </summary>
@@ -1497,8 +1587,9 @@ namespace FirstGearGames.FlexSceneManager
         [Server]
         public static void AddToScene(Scene scene, NetworkConnection conn)
         {
-            _instance.AddToSceneInternal(scene, new NetworkConnection[] { conn });
+            _instance.AddToSceneInternal(scene, new NetworkConnection[] {conn});
         }
+
         /// <summary>
         /// Sets connections as being in a scene and updates FlexSceneCheckers.
         /// </summary>
@@ -1509,6 +1600,7 @@ namespace FirstGearGames.FlexSceneManager
         {
             _instance.AddToSceneInternal(scene, conns);
         }
+
         /// <summary>
         /// 
         /// </summary>
@@ -1569,12 +1661,15 @@ namespace FirstGearGames.FlexSceneManager
                 foreach (FlexSceneChecker item in _sceneCheckers)
                     item.RebuildObservers();
             }
+
             //Dispatched end changed presences.
             InvokeClientPresenceChange(scene, changedPresences, true, false);
         }
+
         #endregion
 
         #region Remove scene checkers.
+
         /// <summary>
         /// Removes a FlexSceneChecker from SceneCheckers.
         /// </summary>
@@ -1583,6 +1678,7 @@ namespace FirstGearGames.FlexSceneManager
         {
             _instance._sceneCheckers.Remove(checker);
         }
+
         /// <summary>
         /// Unsets a connection as being in a scene and updates FlexSceneCheckers.
         /// </summary>
@@ -1591,8 +1687,9 @@ namespace FirstGearGames.FlexSceneManager
         [Server]
         public static void RemoveFromScene(Scene scene, NetworkConnection conn)
         {
-            _instance.RemoveFromSceneInternal(scene, new NetworkConnection[] { conn });
+            _instance.RemoveFromSceneInternal(scene, new NetworkConnection[] {conn});
         }
+
         /// <summary>
         /// Unsets connections as being in a scene and updates FlexSceneCheckers.
         /// </summary>
@@ -1603,6 +1700,7 @@ namespace FirstGearGames.FlexSceneManager
         {
             _instance.RemoveFromSceneInternal(scene, conns);
         }
+
         /// <summary>
         /// 
         /// </summary>
@@ -1681,12 +1779,15 @@ namespace FirstGearGames.FlexSceneManager
                 foreach (FlexSceneChecker item in _sceneCheckers)
                     item.RebuildObservers();
             }
+
             //Dispatched end changed presences.
             InvokeClientPresenceChange(scene, changedPresences, false, false);
         }
+
         #endregion
 
         #region Remove Invalid Scenes.
+
         /// <summary>
         /// Removes invalid scene entries from a SceneQueueData.
         /// </summary>
@@ -1698,7 +1799,7 @@ namespace FirstGearGames.FlexSceneManager
             if (string.IsNullOrEmpty(sqd.SingleScene.SceneReferenceData.Name) ||
                 //Loading for connection but already a single networked scene.
                 (sqd.ScopeType == SceneScopeTypes.Connections && IsNetworkedScene(sqd.SingleScene.SceneReferenceData.Name, _networkedScenes))
-                )
+            )
                 sqd.SingleScene = null;
 
             //Check additive scenes.
@@ -1715,6 +1816,7 @@ namespace FirstGearGames.FlexSceneManager
                         i--;
                     }
                 }
+
                 //Set back to array.
                 sqd.AdditiveScenes.SceneReferenceDatas = listSceneReferenceDatas.ToArray();
 
@@ -1759,12 +1861,13 @@ namespace FirstGearGames.FlexSceneManager
                         (activeScene != null && listSceneNames[i].Name == activeScene.name) ||
                         //If unloading as connection but scene is networked.
                         (sqd.ScopeType == SceneScopeTypes.Connections && IsNetworkedScene(listSceneNames[i].Name, networkedScenes))
-                        )
+                    )
                     {
                         listSceneNames.RemoveAt(i);
                         i--;
                     }
                 }
+
                 //Set back to array.
                 sqd.AdditiveScenes.SceneReferenceDatas = listSceneNames.ToArray();
 
@@ -1773,9 +1876,11 @@ namespace FirstGearGames.FlexSceneManager
                     sqd.AdditiveScenes = null;
             }
         }
+
         #endregion
 
         #region Can Load/Unload Scene.
+
         /// <summary>
         /// Returns if a scene name can be loaded.
         /// </summary>
@@ -1803,6 +1908,7 @@ namespace FirstGearGames.FlexSceneManager
 
             return CanLoadScene(sceneReferenceData.Name, loadOnlyUnloaded);
         }
+
         /// <summary>
         /// Returns if a scene name can be loaded.
         /// </summary>
@@ -1852,14 +1958,17 @@ namespace FirstGearGames.FlexSceneManager
         {
             return CanUnloadScene(scene.name, networkedScenes);
         }
+
         #endregion
 
         #region Remove From Scene Connections
+
         [Server]
         private void RemoveFromAllScenes(NetworkConnection conn, bool removeEmptySceneConnections)
         {
-            RemoveFromAllScenes(new NetworkConnection[] { conn }, removeEmptySceneConnections);
+            RemoveFromAllScenes(new NetworkConnection[] {conn}, removeEmptySceneConnections);
         }
+
         /// <summary>
         /// Removes a connection from all scenes.
         /// </summary>
@@ -1919,9 +2028,11 @@ namespace FirstGearGames.FlexSceneManager
 
             RemoveEmptySceneConnections();
         }
+
         #endregion
 
         #region Helpers.
+
         /// <summary>
         /// Invokes OnClientPresenceChange start or end.
         /// </summary>
@@ -1940,6 +2051,7 @@ namespace FirstGearGames.FlexSceneManager
                     OnClientPresenceChangeEnd?.Invoke(cpc);
             }
         }
+
         /// <summary>
         /// Removes keys from SceneConnections which contain no value.
         /// </summary>
@@ -1980,6 +2092,7 @@ namespace FirstGearGames.FlexSceneManager
             //Fall through, no matches.
             return false;
         }
+
         /// <summary>
         /// Returns if a scene is loaded.
         /// </summary>
@@ -2008,6 +2121,7 @@ namespace FirstGearGames.FlexSceneManager
         {
             return _instance.GetSceneByHandleInternal(handle);
         }
+
         /// <summary>
         /// Returns a scene by handle.
         /// </summary>
@@ -2025,9 +2139,11 @@ namespace FirstGearGames.FlexSceneManager
             //Fall through, not found.
             return new Scene();
         }
+
         #endregion
 
         #region Unused.
+
         ///// <summary>
         ///// Returns if it's possible to attempt a MoveToScene.
         ///// </summary>
@@ -2135,8 +2251,5 @@ namespace FirstGearGames.FlexSceneManager
         //}
 
         #endregion
-
     }
-
-
 }
