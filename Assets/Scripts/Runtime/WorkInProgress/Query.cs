@@ -15,5 +15,34 @@
 
         /// <summary>Result of the query, modified by the traits.</summary>
         public float Result = 0f;
+        
+        public static float GetTotalValue(Actor actor, TraitTag[] tags, TraitTag[] mustHaveTags)
+        {
+            var queryFlat = new Query()
+            {
+                MustHaveTags = mustHaveTags,
+                Tags = tags,
+                TraitOperation = TraitOperation.AddsRemoves
+            };
+            var queryFlatResult = actor.TraitHolder.QueryTotalValue(ref queryFlat);
+
+            var queryIncrease = new Query()
+            {
+                MustHaveTags = mustHaveTags,
+                Tags = tags,
+                TraitOperation = TraitOperation.IncreasesReduces
+            };
+            var queryIncreaseResult = actor.TraitHolder.QueryTotalValue(ref queryIncrease);
+
+            var queryMore = new Query()
+            {
+                MustHaveTags = mustHaveTags,
+                Tags = tags,
+                TraitOperation = TraitOperation.MoreLess
+            };
+            var queryMoreResult = actor.TraitHolder.QueryTotalValue(ref queryMore);
+
+            return queryFlatResult * (1 + queryIncreaseResult) * (1 + queryMoreResult);
+        }
     }
 }

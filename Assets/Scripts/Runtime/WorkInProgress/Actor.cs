@@ -16,8 +16,6 @@ namespace Runtime.WorkInProgress
 
         private HashSet<EffectHandler> EffectHandlers;
 
-
-
         public TraitHolder TraitHolder = new TraitHolder();
 
         private void Start()
@@ -25,7 +23,7 @@ namespace Runtime.WorkInProgress
             RegisterHandlers();
         }
 
-        public void RegisterHandlers()
+        private void RegisterHandlers()
         {
             TraitHolder.TraitsChangedEvent.AddListener(OnTraitsChanged);
 
@@ -70,6 +68,20 @@ namespace Runtime.WorkInProgress
         private void OnTraitsChanged()
         {
             ActorStats.QueryStats();
+            RefreshEffectHandlers();
+        }
+
+        private void RefreshEffectHandlers()
+        {
+            EffectHandlers.Clear();
+
+            foreach (var trait in TraitHolder.GetAllTraits(TraitCategory.Effect))
+            {
+                if (trait.EffectHandler != null && !EffectHandlers.Contains(trait.EffectHandler))
+                {
+                    EffectHandlers.Add(trait.EffectHandler);
+                }
+            }
         }
     }
 }

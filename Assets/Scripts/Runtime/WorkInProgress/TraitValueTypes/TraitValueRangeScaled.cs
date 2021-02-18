@@ -1,6 +1,6 @@
 ﻿namespace Runtime.WorkInProgress
 {
-    public class TraitValueRangeScaled : ITraitValue
+    public class TraitValueRangeScaled : TraitValue
     {
         private const int MAXPowerLevel = 60;
 
@@ -8,8 +8,8 @@
         private readonly float _valueAtMaximumPower;
         private readonly float _variance;
         private readonly IInterpolationType _interpolationType;
-
-        public TraitValueRangeScaled(float valueAtMinimumPower, float valueAtMaximumPower, float variance, IInterpolationType interpolationType)
+        
+        public TraitValueRangeScaled(QueryPriority queryPriority, InstantiatedTrait instantiatedTrait, float valueAtMinimumPower, float valueAtMaximumPower, float variance, IInterpolationType interpolationType) : base(queryPriority, instantiatedTrait)
         {
             _valueAtMinimumPower = valueAtMinimumPower;
             _valueAtMaximumPower = valueAtMaximumPower;
@@ -17,8 +17,7 @@
             _interpolationType = interpolationType;
         }
         
-        public QueryPriority queryPriority => QueryPriority.Basic;
-        public void ApplyValue(ref Query query, float roll = 1, int power = 1)
+        public override void ApplyValue(ref Query query, float roll = 1, int power = 1)
         {
             var powerLevelPercent = power / (float) MAXPowerLevel;
             var value = (_valueAtMaximumPower - _valueAtMinimumPower) * powerLevelPercent + _valueAtMinimumPower;

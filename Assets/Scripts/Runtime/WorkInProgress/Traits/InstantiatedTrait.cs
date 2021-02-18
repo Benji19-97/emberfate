@@ -3,22 +3,26 @@ using System.Linq;
 
 namespace Runtime.WorkInProgress
 {
-    public abstract class Trait
+    public abstract class InstantiatedTrait
     {
+        public readonly TraitHolder TraitHolder;
         public readonly TraitCategory Category;
-        public readonly ITraitValue Value;
+        public readonly TraitValue Value;
+        public readonly EffectHandler EffectHandler;
 
         private TraitOrigin _origin;
         private readonly TraitTag[] _tags;
         private readonly TraitOperation _operation;
-        private EffectHandler _effectHandler;
 
-        protected Trait(TraitTag[] tags, TraitOperation operation, ITraitValue value, TraitCategory category, TraitOrigin origin)
+        protected InstantiatedTrait(TraitHolder traitHolder ,TraitTag[] tags, TraitOperation operation, TraitValue value, TraitCategory category, TraitOrigin origin, EffectHandler effectHandler = null)
         {
+            TraitHolder = traitHolder;
+            Category = category;
+            Value = value;
+            EffectHandler = effectHandler;
+
             _tags = tags;
             _operation = operation;
-            Value = value;
-            Category = category;
             _origin = origin;
         }
 

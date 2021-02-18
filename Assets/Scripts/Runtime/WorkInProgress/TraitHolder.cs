@@ -9,19 +9,19 @@ namespace Runtime.WorkInProgress
     {
         public UnityEvent TraitsChangedEvent { get; private set; }
 
-        private readonly Dictionary<QueryPriority, Dictionary<TraitCategory, List<Trait>>> _traits;
+        private readonly Dictionary<QueryPriority, Dictionary<TraitCategory, List<InstantiatedTrait>>> _traits;
 
         public TraitHolder()
         {
-            _traits = new Dictionary<QueryPriority, Dictionary<TraitCategory, List<Trait>>>();
+            _traits = new Dictionary<QueryPriority, Dictionary<TraitCategory, List<InstantiatedTrait>>>();
 
             foreach (var priority in (QueryPriority[]) Enum.GetValues(typeof(QueryPriority)))
             {
-                _traits.Add(priority, new Dictionary<TraitCategory, List<Trait>>());
+                _traits.Add(priority, new Dictionary<TraitCategory, List<InstantiatedTrait>>());
 
                 foreach (var traitCategory in (TraitCategory[]) Enum.GetValues(typeof(TraitCategory)))
                 {
-                    _traits[priority].Add(traitCategory, new List<Trait>());
+                    _traits[priority].Add(traitCategory, new List<InstantiatedTrait>());
                 }
             }
 
@@ -66,35 +66,51 @@ namespace Runtime.WorkInProgress
         }
         
         
-        public void AddTrait(Trait trait)
+        public void AddTrait(InstantiatedTrait instantiatedTrait)
         {
-            _traits[trait.Value.queryPriority][trait.Category].Add(trait);
+            _traits[instantiatedTrait.Value.QueryPriority][instantiatedTrait.Category].Add(instantiatedTrait);
             TraitsChangedEvent.Invoke();
         }
         
-        public void AddTraits(Trait[] traits)
+        public void AddTraits(InstantiatedTrait[] traits)
         {
             foreach (var trait in traits)
             {
-                _traits[trait.Value.queryPriority][trait.Category].Add(trait);
+                _traits[trait.Value.QueryPriority][trait.Category].Add(trait);
             }
             TraitsChangedEvent.Invoke();
         }
 
-        public void RemoveTrait(Trait trait)
+        public void RemoveTrait(InstantiatedTrait instantiatedTrait)
         {
-            _traits[trait.Value.queryPriority][trait.Category].Remove(trait);
+            _traits[instantiatedTrait.Value.QueryPriority][instantiatedTrait.Category].Remove(instantiatedTrait);
             TraitsChangedEvent.Invoke();
         }
         
-        public void RemoveTraits(Trait[] traits)
+        public void RemoveTraits(InstantiatedTrait[] traits)
         {
             foreach (var trait in traits)
             {
-                _traits[trait.Value.queryPriority][trait.Category].Remove(trait);
+                _traits[trait.Value.QueryPriority][trait.Category].Remove(trait);
             }
             TraitsChangedEvent.Invoke();
         }
+        
+        public InstantiatedTrait[] GetAllTraits(TraitCategory category)
+        {
+            InstantiatedTrait[] traits = Array.Empty<InstantiatedTrait>();
+            foreach (var priority in (QueryPriority[]) Enum.GetValues(typeof(QueryPriority)))
+            {
+                traits.Concat(_traits[priority][category]);
+            }
+            return traits;
+        }
+
+        public InstantiatedTrait[] GetTraits(TraitCategory category, QueryPriority priority)
+        {
+            return _traits[priority][category].ToArray();
+        }
+        
         
     }
 }
