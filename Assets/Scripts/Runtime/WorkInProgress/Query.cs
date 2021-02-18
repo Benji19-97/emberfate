@@ -2,11 +2,10 @@
 {
     public class Query
     {
-        /// <summary>Actor that executes this query.</summary>
-        public Actor Actor;
+        public TraitCategory[] Categories;
         
         /// <summary>Type of trait the query looks for.</summary>
-        public TraitType TraitType;
+        public TraitOperation TraitOperation;
 
         /// <summary>Tags which the traits' tags match against.</summary>
         public TraitTag[] Tags;
@@ -15,6 +14,6 @@
         public TraitTag[] MustHaveTags;
 
         /// <summary>Result of the query, modified by the traits.</summary>
-        public float Result;
+        public float Result = 0f;
     }
 }

@@ -15,7 +15,23 @@
         Melee,
         Ranged,
         Projectile,
+        Movement,
         Speed,
-        Life
+        Life,
+        Mana,
+        Strength,
+        Dexterity,
+        Intelligence,
+        Attunement,
+        Malevolence,
+        Faith,
+        GoldFind,
+        ItemFind,
+        Experience,
+        RegenerationFlat,
+        RegenerationPercent,
+        Recovery,
+        HealthGlobeFlat,
+        HealthGlobePercent
     }
 }

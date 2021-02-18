@@ -8,7 +8,7 @@
         {
             _value = value;
         }
-        public QueryType QueryType => QueryType.Basic;
+        public QueryPriority queryPriority => QueryPriority.Basic;
         public void ApplyValue(ref Query query, float roll = 1, int power = 1)
         {
             query.Result += _value;

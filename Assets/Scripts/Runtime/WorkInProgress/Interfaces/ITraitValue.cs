@@ -4,7 +4,7 @@ namespace Runtime.WorkInProgress
 {
     public interface ITraitValue
     {
-        QueryType QueryType
+        QueryPriority queryPriority
         {
             get;
         }

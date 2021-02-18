@@ -1,32 +1,24 @@
 ﻿using System;
+using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Events;
 
 namespace Runtime.WorkInProgress
 {
     public class Actor : MonoBehaviour
     {
-        public int strength;
-        public int dexterity;
-        public int intelligence;
-        public int attunement;
-        public int faith;
-        public int malevolence;
-        public int maximumLife;
-        public int maximumMana;
-        public int maximumRage;
-        public float movementSpeed;
-        public float magicFind;
-        public float goldFind;
-        public float experience;
-        public float lifeRegeneration;
-        public float manaRegeneration;
-        public float rageRegeneration;
-        public float healthGlobeBonusFlat;
-        public float healthGlobeBonusIncrease;
-        public float healthGlobeBonusMore;
-
+        public ActorStats ActorStats;
         
-        public TraitListContainer TraitListContainer = new TraitListContainer();
+        public UnityEvent<Action> UseEvent;
+        public UnityEvent<Actor> PerSecondEvent;
+        public UnityEvent<Actor, Damage> DamageEvent;
+        public UnityEvent<Actor, Damage> TakeDamageEvent;
+
+        private HashSet<EffectHandler> EffectHandlers;
+
+
+
+        public TraitHolder TraitHolder = new TraitHolder();
 
         private void Start()
         {
@@ -35,20 +27,49 @@ namespace Runtime.WorkInProgress
 
         public void RegisterHandlers()
         {
-            TraitListContainer.TraitsChangedEvent.AddListener(OnTraitsChanged);
+            TraitHolder.TraitsChangedEvent.AddListener(OnTraitsChanged);
+
+            UseEvent.AddListener(InvokeEffectHandlersOnUse);
+            PerSecondEvent.AddListener(InvokeEffectHandlersPerSecond);
+            DamageEvent.AddListener(InvokeEffectHandlersOnDamage);
+            TakeDamageEvent.AddListener(InvokeEffectHandlersOnTakeDamage);
+        }
+
+        private void InvokeEffectHandlersOnUse(Action action)
+        {
+            foreach (var effectHandler in EffectHandlers)
+            {
+                effectHandler.OnUse(action);
+            }
+        }
+        
+        private void InvokeEffectHandlersPerSecond(Actor actor)
+        {
+            foreach (var effectHandler in EffectHandlers)
+            {
+                effectHandler.PerSecond(actor);
+            }
+        }
+        
+        private void InvokeEffectHandlersOnDamage(Actor actor, Damage damage)
+        {
+            foreach (var effectHandler in EffectHandlers)
+            {
+                effectHandler.OnDamage(actor, damage);
+            }
+        }
+        
+        private void InvokeEffectHandlersOnTakeDamage(Actor actor, Damage damage)
+        {
+            foreach (var effectHandler in EffectHandlers)
+            {
+                effectHandler.OnTakeDamage(actor, damage);
+            }
         }
 
         private void OnTraitsChanged()
         {
-            var query = new Query()
-            {
-                Actor = this,
-                MustHaveTags = null,
-                Result = 0,
-                Tags = new TraitTag[1] {TraitTag.Life},
-                TraitType = TraitType.AddsRemoves
-            };
-            maximumLife = (int) TraitListContainer.QueryTotalValue(ref query);
+            ActorStats.QueryStats();
         }
     }
 }

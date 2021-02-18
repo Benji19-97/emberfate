@@ -17,7 +17,7 @@
             _interpolationType = interpolationType;
         }
         
-        public QueryType QueryType => QueryType.Basic;
+        public QueryPriority queryPriority => QueryPriority.Basic;
         public void ApplyValue(ref Query query, float roll = 1, int power = 1)
         {
             var powerLevelPercent = power / (float) MAXPowerLevel;

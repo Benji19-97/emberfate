@@ -1,31 +1,40 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 
 namespace Runtime.WorkInProgress
 {
     public abstract class Trait
     {
-        private readonly TraitTag[] _tags;
-        private readonly TraitType _type;
-        private readonly ITraitValue _value;
+        public readonly TraitCategory Category;
+        public readonly ITraitValue Value;
 
-        protected Trait(TraitTag[] tags, TraitType type, ITraitValue value)
+        private TraitOrigin _origin;
+        private readonly TraitTag[] _tags;
+        private readonly TraitOperation _operation;
+        private EffectHandler _effectHandler;
+
+        protected Trait(TraitTag[] tags, TraitOperation operation, ITraitValue value, TraitCategory category, TraitOrigin origin)
         {
             _tags = tags;
-            _type = type;
-            _value = value;
+            _operation = operation;
+            Value = value;
+            Category = category;
+            _origin = origin;
         }
 
-        public virtual void CheckIfFulfillsQuery(ref Query query, QueryType queryType)
+        public virtual void CheckIfFulfillsQuery(ref Query query)
         {
-            if (query.TraitType != _type) return;
-
-            if (queryType != _value.QueryType) return;
+            if (query.TraitOperation != _operation) return;
 
             if (query.MustHaveTags != null && _tags.Intersect(query.MustHaveTags).Count() != query.MustHaveTags.Length) return;
 
-            if (_tags.Intersect(query.Tags).Count() != _tags.Length) return;
+            var tags = query.Tags ?? Array.Empty<TraitTag>();
+            var mustHaveTags = query.MustHaveTags ?? Array.Empty<TraitTag>();
+            var allTags = tags.Concat(mustHaveTags);
+            
+            if (_tags.Intersect(allTags).Count() != _tags.Length) return;
 
-            _value.ApplyValue(ref query);
+            Value.ApplyValue(ref query);
         }
     }
 }

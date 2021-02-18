@@ -1,6 +1,6 @@
 ﻿namespace Runtime.WorkInProgress
 {
-    public enum QueryType
+    public enum QueryPriority
     {
         Basic,
         Per,
