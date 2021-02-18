@@ -16,6 +16,8 @@ namespace Ayaya
             window.titleContent = new GUIContent("Change Maximum");
             window.collection = traitCollection;
             window.size = traitCollection.Traits.Length;
+            window.minSize = new Vector2(200, 75);
+            window.maxSize = new Vector2(200, 75);
             window.ShowModalUtility();
         }
 
@@ -27,7 +29,7 @@ namespace Ayaya
             EditorGUILayout.BeginHorizontal();
             if (GUILayout.Button("OK"))
             {
-                Array.Resize(ref collection.Traits, size);
+                Array.Resize(ref collection.Traits, Mathf.Clamp(size, 0, 9999));
                 Close();
             }
 

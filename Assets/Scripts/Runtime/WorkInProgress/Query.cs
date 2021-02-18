@@ -5,7 +5,7 @@
         public TraitCategory[] Categories;
         
         /// <summary>Type of trait the query looks for.</summary>
-        public TraitOperation TraitOperation;
+        public TraitOperator TraitOperator;
 
         /// <summary>Tags which the traits' tags match against.</summary>
         public TraitTag[] Tags;
@@ -22,7 +22,7 @@
             {
                 MustHaveTags = mustHaveTags,
                 Tags = tags,
-                TraitOperation = TraitOperation.AddsRemoves
+                TraitOperator = TraitOperator.AddsRemoves
             };
             var queryFlatResult = actor.TraitHolder.QueryTotalValue(ref queryFlat);
 
@@ -30,7 +30,7 @@
             {
                 MustHaveTags = mustHaveTags,
                 Tags = tags,
-                TraitOperation = TraitOperation.IncreasesReduces
+                TraitOperator = TraitOperator.IncreasesReduces
             };
             var queryIncreaseResult = actor.TraitHolder.QueryTotalValue(ref queryIncrease);
 
@@ -38,7 +38,7 @@
             {
                 MustHaveTags = mustHaveTags,
                 Tags = tags,
-                TraitOperation = TraitOperation.MoreLess
+                TraitOperator = TraitOperator.MoreLess
             };
             var queryMoreResult = actor.TraitHolder.QueryTotalValue(ref queryMore);
 

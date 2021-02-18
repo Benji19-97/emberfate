@@ -12,9 +12,9 @@ namespace Runtime.WorkInProgress
 
         private TraitOrigin _origin;
         private readonly TraitTag[] _tags;
-        private readonly TraitOperation _operation;
+        private readonly TraitOperator _operator;
 
-        protected InstantiatedTrait(TraitHolder traitHolder ,TraitTag[] tags, TraitOperation operation, TraitValue value, TraitCategory category, TraitOrigin origin, EffectHandler effectHandler = null)
+        protected InstantiatedTrait(TraitHolder traitHolder ,TraitTag[] tags, TraitOperator @operator, TraitValue value, TraitCategory category, TraitOrigin origin, EffectHandler effectHandler = null)
         {
             TraitHolder = traitHolder;
             Category = category;
@@ -22,13 +22,13 @@ namespace Runtime.WorkInProgress
             EffectHandler = effectHandler;
 
             _tags = tags;
-            _operation = operation;
+            _operator = @operator;
             _origin = origin;
         }
 
         public virtual void CheckIfFulfillsQuery(ref Query query)
         {
-            if (query.TraitOperation != _operation) return;
+            if (query.TraitOperator != _operator) return;
 
             if (query.MustHaveTags != null && _tags.Intersect(query.MustHaveTags).Count() != query.MustHaveTags.Length) return;
 

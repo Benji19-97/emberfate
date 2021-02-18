@@ -1,6 +1,6 @@
 ﻿namespace Runtime.WorkInProgress
 {
-    public enum TraitOperation
+    public enum TraitOperator
     {
         AddsRemoves,
         IncreasesReduces,
