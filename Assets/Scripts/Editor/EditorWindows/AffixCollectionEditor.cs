@@ -303,27 +303,17 @@ namespace Ayaya
                 _target.affixes[_selectedAffixIdx].traitVersion = enums[0];
             }
 
-            _target.affixes[_selectedAffixIdx].traitVersion = (TraitVersion) EditorGUILayout.Popup(idx, enumStrings.ToArray());
+            idx = EditorGUILayout.Popup(idx, enumStrings.ToArray());
 
-            //
-            // var 
+            var traitVersion = (TraitVersion) Enum.Parse(typeof(TraitVersion) ,enumStrings[idx]);
 
-            // int idx = 0;
-            // foreach (var version in _target.traitCollectionDictionary.traitCollections[_target.affixes[_selectedAffixIdx].traitCollectionIdx]
-            //     .traits[_target.affixes[_selectedAffixIdx].traitIdx].versions)
-            // {
-            //     if (version)
-            //     {
-            //         if (GUILayout.Button(traitVersionTypes[idx]))
-            //         {
-            //             _target.affixes[_selectedAffixIdx].traitVersion = ((TraitVersion[]) Enum.GetValues(typeof(TraitVersion)))[idx];
-            //         }
-            //     }
-            //
-            //     idx++;
-            // }
-            //
-            // GUILayout.Label("Selected Version: " + _target.affixes[_selectedAffixIdx].traitVersion);
-        }
+            if (_target.affixes[_selectedAffixIdx].traitVersion != traitVersion)
+            {
+                _target.affixes[_selectedAffixIdx].traitVersion = traitVersion;
+            }
+            
+            GUILayout.Label(_target.affixes[_selectedAffixIdx].traitVersion.ToString());
+
+       }
     }
 }
