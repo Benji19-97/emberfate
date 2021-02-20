@@ -51,30 +51,40 @@ namespace Ayaya
                     EditorUtility.SetDirty(_target);
                 }
             }
-            
-            RefreshTraitCollection();
+
+            TryRefreshTraitCollection();
         }
 
-        private void RefreshTraitCollection()
+        private void TryRefreshTraitCollection()
         {
             if (_target && _target.traitCollectionDictionary && _target.traitCollectionDictionary.traitCollections != null)
             {
                 if (traitCollections == null || traitCollections.Length != _target.traitCollectionDictionary.traitCollections?.Length)
                 {
-                    traitCollections = new string[_target.traitCollectionDictionary.traitCollections.Length];
-                    availableTraits = new string[_target.traitCollectionDictionary.traitCollections.Length][];
-                    
-                    for (int i = 0; i < _target.traitCollectionDictionary.traitCollections.Length; i++)
-                    {
-                        traitCollections[i] = _target.traitCollectionDictionary.traitCollections[i].name;
+                    RefreshTraitCollection();
+                }
+            }
+        }
 
-                        availableTraits[i] = new string[_target.traitCollectionDictionary.traitCollections[i].traits.Length];
+        private void RefreshTraitCollection()
+        {
+            traitCollections = new string[_target.traitCollectionDictionary.traitCollections.Length];
+            availableTraits = new string[_target.traitCollectionDictionary.traitCollections.Length][];
 
-                        for (int y = 0; y < _target.traitCollectionDictionary.traitCollections[i].traits.Length; y++)
-                        {
-                            availableTraits[i][y] = _target.traitCollectionDictionary.traitCollections[i].traits[y].name;
-                        }
-                    }
+            for (int i = 0; i < _target.traitCollectionDictionary.traitCollections.Length; i++)
+            {
+                if (_target.traitCollectionDictionary.traitCollections[i] == null)
+                {
+                    continue;
+                }
+
+                traitCollections[i] = _target.traitCollectionDictionary.traitCollections[i].name;
+
+                availableTraits[i] = new string[_target.traitCollectionDictionary.traitCollections[i].traits.Length];
+
+                for (int y = 0; y < _target.traitCollectionDictionary.traitCollections[i].traits.Length; y++)
+                {
+                    availableTraits[i][y] = _target.traitCollectionDictionary.traitCollections[i].traits[y].name;
                 }
             }
         }
@@ -87,6 +97,12 @@ namespace Ayaya
             {
                 _target.traitCollectionDictionary =
                     EditorGUILayout.ObjectField(_target.traitCollectionDictionary, typeof(TraitCollectionDictionary), false) as TraitCollectionDictionary;
+
+                if (GUILayout.Button("Refresh"))
+                {
+                    RefreshTraitCollection();
+                }
+
 
                 if (_target.traitCollectionDictionary)
                 {
@@ -184,12 +200,29 @@ namespace Ayaya
         {
             if (_selectedAffixIdx >= 0 && _selectedAffixIdx <= _target.affixes.Length && _target.affixes.Length > 0)
             {
-                _target.affixes[_selectedAffixIdx].name = GUILayout.TextField(_target.affixes[_selectedAffixIdx].name, 32);
-                _target.affixes[_selectedAffixIdx].traitCollectionIdx =
-                    EditorGUILayout.Popup(_target.affixes[_selectedAffixIdx].traitCollectionIdx, traitCollections);
-                
-                _target.affixes[_selectedAffixIdx].traitIdx =
-                    EditorGUILayout.Popup(_target.affixes[_selectedAffixIdx].traitIdx, availableTraits[_target.affixes[_selectedAffixIdx].traitCollectionIdx]);
+                try
+                {
+                    _target.affixes[_selectedAffixIdx].name = GUILayout.TextField(_target.affixes[_selectedAffixIdx].name, 32);
+                    _target.affixes[_selectedAffixIdx].traitCollectionIdx =
+                        EditorGUILayout.Popup(_target.affixes[_selectedAffixIdx].traitCollectionIdx, traitCollections);
+
+                    if (availableTraits == null)
+                    {
+                        RefreshTraitCollection();
+                    }
+
+
+                    _target.affixes[_selectedAffixIdx].traitIdx =
+                        EditorGUILayout.Popup(_target.affixes[_selectedAffixIdx].traitIdx,
+                            availableTraits[_target.affixes[_selectedAffixIdx].traitCollectionIdx]);
+                }
+                catch (IndexOutOfRangeException e)
+                {
+                    Debug.LogWarning(e);
+                    _target.affixes[_selectedAffixIdx].traitCollectionIdx = 0;
+                    _target.affixes[_selectedAffixIdx].traitIdx = 0;
+                    throw;
+                }
             }
         }
     }

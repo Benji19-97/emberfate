@@ -17,8 +17,8 @@ namespace Runtime.NewStuff
     {
         public Affix()
         {
-            traitCollectionIdx = -1;
-            traitIdx = -1;
+            traitCollectionIdx = 0;
+            traitIdx = 0;
             traitVersion = TraitVersion.AddsRemovesFixedFlat;
             valuesPowerMin = new[] {0f};
             valuesPowerMax = new[] {0f};
