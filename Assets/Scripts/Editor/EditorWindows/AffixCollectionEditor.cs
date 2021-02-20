@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using Runtime.NewStuff;
 using UnityEditor;
 using UnityEngine;
@@ -20,8 +22,9 @@ namespace Ayaya
         private Texture2D _blueTex;
         private int _selectedAffixIdx;
 
-        private string[] traitCollections;
-        private string[][] availableTraits;
+        private string[] traitVersionTypes;
+        private string[] traitCollectionsStrings;
+        private string[][] availableTraitsStrings;
 
         [MenuItem("Data/Affix Collection Editor")]
         private static void ShowWindow()
@@ -38,6 +41,8 @@ namespace Ayaya
             _darkTex = TextureHelper.MakeTex(2, 2, new Color(0f, 0f, 0f, 0.1f));
             _blueTex = TextureHelper.MakeTex(2, 2, new Color(44f / 255f, 93 / 255f, 135f / 255f, 1f));
             _consoleFont = Font.CreateDynamicFontFromOSFont("Consolas", 11);
+
+            traitVersionTypes = Enum.GetNames(typeof(TraitVersion));
         }
 
         private void Update()
@@ -51,40 +56,44 @@ namespace Ayaya
                     EditorUtility.SetDirty(_target);
                 }
             }
-
-            TryRefreshTraitCollection();
         }
 
-        private void TryRefreshTraitCollection()
+        private void RefreshTraitCollectionStrings()
         {
-            if (_target && _target.traitCollectionDictionary && _target.traitCollectionDictionary.traitCollections != null)
-            {
-                if (traitCollections == null || traitCollections.Length != _target.traitCollectionDictionary.traitCollections?.Length)
-                {
-                    RefreshTraitCollection();
-                }
-            }
-        }
-
-        private void RefreshTraitCollection()
-        {
-            traitCollections = new string[_target.traitCollectionDictionary.traitCollections.Length];
-            availableTraits = new string[_target.traitCollectionDictionary.traitCollections.Length][];
+            traitCollectionsStrings = new string[_target.traitCollectionDictionary.traitCollections.Length];
 
             for (int i = 0; i < _target.traitCollectionDictionary.traitCollections.Length; i++)
             {
-                if (_target.traitCollectionDictionary.traitCollections[i] == null)
+                if (_target.traitCollectionDictionary.traitCollections[i] == null ||
+                    _target.traitCollectionDictionary.traitCollections?[i].traits == null ||
+                    _target.traitCollectionDictionary.traitCollections[i].traits.Length <= 0)
                 {
                     continue;
                 }
 
-                traitCollections[i] = _target.traitCollectionDictionary.traitCollections[i].name;
+                var collectionName = _target.traitCollectionDictionary.traitCollections[i].name;
+                traitCollectionsStrings[i] = collectionName;
+            }
+        }
 
-                availableTraits[i] = new string[_target.traitCollectionDictionary.traitCollections[i].traits.Length];
+        private void RefreshAvailableTraitsStrings()
+        {
+            availableTraitsStrings = new string[_target.traitCollectionDictionary.traitCollections.Length][];
+            for (int i = 0; i < _target.traitCollectionDictionary.traitCollections.Length; i++)
+            {
+                if (_target.traitCollectionDictionary.traitCollections[i] == null ||
+                    _target.traitCollectionDictionary.traitCollections?[i].traits == null ||
+                    _target.traitCollectionDictionary.traitCollections[i].traits.Length <= 0)
+                {
+                    continue;
+                }
+
+                availableTraitsStrings[i] = new string[_target.traitCollectionDictionary.traitCollections[i].traits.Length];
 
                 for (int y = 0; y < _target.traitCollectionDictionary.traitCollections[i].traits.Length; y++)
                 {
-                    availableTraits[i][y] = _target.traitCollectionDictionary.traitCollections[i].traits[y].name;
+                    var traitName = _target.traitCollectionDictionary.traitCollections[i].traits[y]?.name;
+                    availableTraitsStrings[i][y] = traitName ?? "null";
                 }
             }
         }
@@ -100,7 +109,7 @@ namespace Ayaya
 
                 if (GUILayout.Button("Refresh"))
                 {
-                    RefreshTraitCollection();
+                    RefreshTraitCollectionStrings();
                 }
 
 
@@ -200,30 +209,121 @@ namespace Ayaya
         {
             if (_selectedAffixIdx >= 0 && _selectedAffixIdx <= _target.affixes.Length && _target.affixes.Length > 0)
             {
-                try
-                {
-                    _target.affixes[_selectedAffixIdx].name = GUILayout.TextField(_target.affixes[_selectedAffixIdx].name, 32);
-                    _target.affixes[_selectedAffixIdx].traitCollectionIdx =
-                        EditorGUILayout.Popup(_target.affixes[_selectedAffixIdx].traitCollectionIdx, traitCollections);
+                OnGuiName();
+                OnGuiAffixType();
 
-                    if (availableTraits == null)
+                if (_target.traitCollectionDictionary.traitCollections != null && _target.traitCollectionDictionary.traitCollections.Length > 0)
+                {
+                    if (traitCollectionsStrings == null || traitCollectionsStrings.Length != _target.traitCollectionDictionary.traitCollections.Length)
                     {
-                        RefreshTraitCollection();
+                        RefreshTraitCollectionStrings();
                     }
 
+                    var collectionIdx = _target.affixes[_selectedAffixIdx].traitCollectionIdx;
+                    var collectionsArr = _target.traitCollectionDictionary.traitCollections;
 
-                    _target.affixes[_selectedAffixIdx].traitIdx =
-                        EditorGUILayout.Popup(_target.affixes[_selectedAffixIdx].traitIdx,
-                            availableTraits[_target.affixes[_selectedAffixIdx].traitCollectionIdx]);
-                }
-                catch (IndexOutOfRangeException e)
-                {
-                    Debug.LogWarning(e);
-                    _target.affixes[_selectedAffixIdx].traitCollectionIdx = 0;
-                    _target.affixes[_selectedAffixIdx].traitIdx = 0;
-                    throw;
+                    if (collectionIdx < 0 || collectionIdx >= collectionsArr.Length)
+                    {
+                        _target.affixes[_selectedAffixIdx].traitCollectionIdx = 0;
+                        collectionIdx = 0;
+                    }
+
+                    OnGuiSelectCollectionIndex();
+
+                    if (_target.traitCollectionDictionary.traitCollections[collectionIdx]?.traits != null &&
+                        _target.traitCollectionDictionary.traitCollections[collectionIdx].traits.Length > 0)
+                    {
+                        if (availableTraitsStrings == null ||
+                            availableTraitsStrings[collectionIdx].Length != _target.traitCollectionDictionary.traitCollections.Length)
+                        {
+                            RefreshAvailableTraitsStrings();
+                        }
+
+                        if (availableTraitsStrings[collectionIdx] == null ||
+                            availableTraitsStrings[collectionIdx].Length != _target.traitCollectionDictionary.traitCollections[collectionIdx].traits.Length)
+                        {
+                            RefreshAvailableTraitsStrings();
+                        }
+
+                        var traitIdx = _target.affixes[_selectedAffixIdx].traitIdx;
+
+                        if (traitIdx < 0 || traitIdx >= _target.traitCollectionDictionary.traitCollections[collectionIdx].traits.Length)
+                        {
+                            _target.affixes[_selectedAffixIdx].traitIdx = 0;
+                        }
+
+                        OnGuiSelectTraitIndex();
+
+                        OnGuiSelectVersion();
+                    }
                 }
             }
+        }
+
+        private void OnGuiName()
+        {
+            _target.affixes[_selectedAffixIdx].name = GUILayout.TextField(_target.affixes[_selectedAffixIdx].name, 32);
+        }
+
+        private void OnGuiAffixType()
+        {
+            _target.affixes[_selectedAffixIdx].affixType = (AffixType) EditorGUILayout.EnumPopup(_target.affixes[_selectedAffixIdx].affixType);
+        }
+
+        private void OnGuiSelectCollectionIndex()
+        {
+            _target.affixes[_selectedAffixIdx].traitCollectionIdx =
+                EditorGUILayout.Popup(_target.affixes[_selectedAffixIdx].traitCollectionIdx, traitCollectionsStrings);
+        }
+
+        private void OnGuiSelectTraitIndex()
+        {
+            _target.affixes[_selectedAffixIdx].traitIdx =
+                EditorGUILayout.Popup(_target.affixes[_selectedAffixIdx].traitIdx,
+                    availableTraitsStrings[_target.affixes[_selectedAffixIdx].traitCollectionIdx]);
+        }
+
+        private void OnGuiSelectVersion()
+        {
+            var versions = _target.traitCollectionDictionary.traitCollections[_target.affixes[_selectedAffixIdx].traitCollectionIdx]
+                .traits[_target.affixes[_selectedAffixIdx].traitIdx].versions;
+            var enums = Trait.ReturnSelectedElements(versions);
+
+            List<string> enumStrings = new List<string>();
+
+            for (int i = 0; i < enums.Count; i++)
+            {
+                enumStrings.Add(enums[i].ToString());
+            }
+
+            int idx = enums.FindIndex(e => e == _target.affixes[_selectedAffixIdx].traitVersion);
+            if (idx < 0 || idx >= enums.Count)
+            {
+                idx = 0;
+                _target.affixes[_selectedAffixIdx].traitVersion = enums[0];
+            }
+
+            _target.affixes[_selectedAffixIdx].traitVersion = (TraitVersion) EditorGUILayout.Popup(idx, enumStrings.ToArray());
+
+            //
+            // var 
+
+            // int idx = 0;
+            // foreach (var version in _target.traitCollectionDictionary.traitCollections[_target.affixes[_selectedAffixIdx].traitCollectionIdx]
+            //     .traits[_target.affixes[_selectedAffixIdx].traitIdx].versions)
+            // {
+            //     if (version)
+            //     {
+            //         if (GUILayout.Button(traitVersionTypes[idx]))
+            //         {
+            //             _target.affixes[_selectedAffixIdx].traitVersion = ((TraitVersion[]) Enum.GetValues(typeof(TraitVersion)))[idx];
+            //         }
+            //     }
+            //
+            //     idx++;
+            // }
+            //
+            // GUILayout.Label("Selected Version: " + _target.affixes[_selectedAffixIdx].traitVersion);
         }
     }
 }

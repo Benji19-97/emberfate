@@ -6,11 +6,11 @@ namespace Runtime.NewStuff
 {
     public enum TraitVersion
     {
-        AddsRemovesRangeFlat = 0,
-        AddsRemovesFixedFlat = 1,
-        AddsRemovesFixedPercentage = 2,
-        IncreasesReducesFixedPercentage = 3,
-        MoreLessFixedPercentage = 4
+        AddsRemovesRangeFlat,
+        AddsRemovesFixedFlat,
+        AddsRemovesFixedPercentage,
+        IncreasesReducesFixedPercentage,
+        MoreLessFixedPercentage
     }
 
     [Serializable]
@@ -21,7 +21,7 @@ namespace Runtime.NewStuff
             name = "";
             effect = null;
             modifier = null;
-            versions = new bool[0];
+            versions = 0;
             category = TraitCategory.Attribute;
             tags = new List<TraitTag>();
             notes = "";
@@ -30,10 +30,28 @@ namespace Runtime.NewStuff
         public string name;
         public Effect effect;
         public Modifier modifier;
-        public bool[] versions;
+        public int versions;
         public TraitCategory category;
         public List<TraitTag> tags; 
         public string notes;
         public bool isLocalModifier;
+        
+        public static List<TraitVersion> ReturnSelectedElements(int versions)
+        {
+            List<TraitVersion> selectedElements = new List<TraitVersion>();
+
+            var enums = (TraitVersion[]) Enum.GetValues(typeof(TraitVersion));
+            
+            for (int i = 0; i < enums.Length; i++)
+            {
+                int layer = 1 << i;
+                if ((versions & layer) != 0)
+                {
+                    selectedElements.Add(enums[i]);
+                }
+            }
+ 
+            return selectedElements;
+        }
     }
 }

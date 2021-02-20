@@ -218,7 +218,7 @@ namespace Ayaya
                         name = "New Trait",
                         notes = "",
                         tags = new List<TraitTag>(),
-                        versions = new bool[0]
+                        versions = 0
                     };
                 }
 
@@ -242,28 +242,20 @@ namespace Ayaya
                 GUILayout.Space(5);
 
                 GUILayout.Label("Versions:");
-                var enums = (TraitVersion[]) Enum.GetValues(typeof(TraitVersion));
+                var enums = Enum.GetNames(typeof(TraitVersion));
+                _target.traits[_selectedTraitIdx].versions = EditorGUILayout.MaskField(_target.traits[_selectedTraitIdx].versions, enums, GUILayout.Width(200));
 
-                if (_target.traits[_selectedTraitIdx].versions == null)
+                var style = new GUIStyle();
+                style.normal.textColor = new Color(0.6f, 0.6f, 0.6f, 1f);
+                
+                GUILayout.BeginVertical(GUI.skin.box, GUILayout.Width(240));
+                foreach (var traitVersion in Trait.ReturnSelectedElements(_target.traits[_selectedTraitIdx].versions))
                 {
-                    _target.traits[_selectedTraitIdx].versions = new bool[enums.Length];
+                    GUILayout.Label("> " + traitVersion.ToString(), style);
+                    GUILayout.Space(3);
                 }
-
-                if (_target.traits[_selectedTraitIdx].versions.Length != enums.Length || _target.traits[_selectedTraitIdx].versions.Length <= 0)
-                {
-                    Array.Resize(ref _target.traits[_selectedTraitIdx].versions, enums.Length);
-                }
-
-                for (int i = 0; i < enums.Length; i++)
-                {
-                    GUILayout.BeginHorizontal();
-                    _target.traits[_selectedTraitIdx].versions[i] =
-                        EditorGUILayout.ToggleLeft("", _target.traits[_selectedTraitIdx].versions[i], GUILayout.Width(14));
-                    GUILayout.Label(enums[i].ToString());
-                    GUILayout.FlexibleSpace();
-                    GUILayout.EndHorizontal();
-                }
-
+                GUILayout.EndVertical();
+                
                 GUILayout.Space(5);
 
 
