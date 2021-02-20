@@ -1,27 +1,25 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Runtime.NewStuff;
 using Runtime.WorkInProgress;
 using UnityEditor;
 using UnityEngine;
-using ValueType = Runtime.NewStuff.ValueType;
 
 namespace Ayaya
 {
     public class TraitCollectionEditor : EditorWindow
     {
-        private const int SidebarWidth = 220;
+        private const int SidebarWidth = 300;
         private const int TagListWidth = 200;
         private const int TagListHeight = 300;
 
         private TraitCollection _target;
         private TraitCollection _newTarget;
-        private bool _arrayChanged;
 
-        private string _searchFieldText;
+        private string _searchFieldText = "";
 
         private int _selectedTraitIdx;
-        private string[] _traitStringList = Array.Empty<string>();
 
         private Vector2 _traitListScrollPosition;
 
@@ -31,12 +29,23 @@ namespace Ayaya
         private Texture2D _verticalLineTex;
         private Texture2D _lightTex;
         private Texture2D _darkTex;
+        private Texture2D _blueTex;
 
-        [MenuItem("Traits/Trait Collection Editor")]
+        private Font _consoleFont;
+
+        [MenuItem("Data/Trait Collection Editor")]
         private static void ShowWindow()
         {
             var window = GetWindow<TraitCollectionEditor>();
             window.titleContent = new GUIContent("Trait Collection Editor");
+            window.Show();
+        }
+
+        public static void ShowWindow(TraitCollection collection)
+        {
+            var window = GetWindow<TraitCollectionEditor>();
+            window.titleContent = new GUIContent("Trait Collection Editor");
+            window._newTarget = collection;
             window.Show();
         }
 
@@ -45,15 +54,13 @@ namespace Ayaya
             _verticalLineTex = TextureHelper.MakeTex(2, TagListHeight, new Color(0.5f, 0.5f, 0.5f, 0.5f));
             _lightTex = TextureHelper.MakeTex(2, TagListHeight, new Color(0f, 0f, 0f, 0.05f));
             _darkTex = TextureHelper.MakeTex(2, TagListHeight, new Color(0f, 0f, 0f, 0.1f));
+            _blueTex = TextureHelper.MakeTex(2, 2, new Color(44f / 255f, 93 / 255f, 135f / 255f, 1f));
+
+            _consoleFont = Font.CreateDynamicFontFromOSFont("Consolas", 11);
         }
 
         private void Update()
         {
-            if (_target != null && _target.Traits != null && _traitStringList.Length != _target.Traits.Length)
-            {
-                _arrayChanged = true;
-            }
-
             if (_newTarget != _target)
             {
                 _target = _newTarget;
@@ -62,29 +69,30 @@ namespace Ayaya
                 {
                     EditorUtility.SetDirty(_target);
                 }
-                
-                _arrayChanged = true;
-            }
-
-            if (_arrayChanged)
-            {
-                if (_newTarget != null)
-                {
-                    _traitStringList = new string[_newTarget.Traits.Count()];
-                    for (int i = 0; i < _newTarget.Traits.Count(); i++)
-                    {
-                        _traitStringList[i] = $"[{i:D3}] " + _newTarget.Traits[i].Name;
-                    }
-                }
             }
         }
 
         private void OnGUI()
         {
+            var e = Event.current;
+
+            if (e.type == EventType.KeyDown && e.keyCode == KeyCode.DownArrow)
+            {
+                _selectedTraitIdx++;
+            }
+
+            if (e.type == EventType.KeyDown && e.keyCode == KeyCode.UpArrow)
+            {
+                _selectedTraitIdx--;
+            }
+
+            GUILayout.Space(5);
+
             EditorGUILayout.BeginHorizontal();
             _newTarget = (TraitCollection) EditorGUILayout.ObjectField(_target, typeof(TraitCollection), false);
+            GUILayout.Space(5);
 
-            if (_target && EditorUtility.IsDirty(_target))
+            if (_target)
             {
                 if (GUILayout.Button("Save", GUILayout.Width(150)))
                 {
@@ -92,18 +100,25 @@ namespace Ayaya
                     AssetDatabase.SaveAssets();
                 }
             }
+
             EditorGUILayout.EndHorizontal();
+            GUILayout.Space(5);
+
 
             if (_target)
             {
+                GUILayout.BeginHorizontal();
+                GUILayout.Label(_target.name);
+                GUILayout.FlexibleSpace();
+                GUILayout.EndHorizontal();
+                GUILayout.Space(10);
+                
                 OnGUITraits();
             }
         }
 
         private void OnGUITraits()
         {
-
-            
             EditorGUILayout.BeginHorizontal();
 
             EditorGUILayout.BeginVertical(GUILayout.Width(SidebarWidth));
@@ -119,60 +134,136 @@ namespace Ayaya
 
         private void OnGUITraitsSidebar()
         {
+            GUILayout.BeginVertical(GUI.skin.box);
+            GUILayout.Label("Search:");
+            _searchFieldText = EditorGUILayout.DelayedTextField(_searchFieldText, GUILayout.Width(SidebarWidth - 20));
+            GUILayout.Space(5);
 
-            _searchFieldText = EditorGUILayout.DelayedTextField(_searchFieldText);
             OnGUITraitList();
+            GUILayout.EndVertical();
         }
 
         private void OnGUITraitList()
         {
             _traitListScrollPosition = GUILayout.BeginScrollView(_traitListScrollPosition);
-            var fontStyle = new GUIStyle(GUI.skin.button);
-            fontStyle.clipping = TextClipping.Clip;
-            fontStyle.alignment = TextAnchor.MiddleLeft;
-            _selectedTraitIdx = GUILayout.SelectionGrid(_selectedTraitIdx, _traitStringList, 1, fontStyle, GUILayout.Width(SidebarWidth - 20));
+
+            var baseStyle = new GUIStyle(GUI.skin.label)
+            {
+                clipping = TextClipping.Clip,
+                margin = new RectOffset(0, 0, 0, 0),
+                font = _consoleFont, fontSize = 12,
+                padding = new RectOffset(0, 0, 2, 2),
+                fixedHeight = 20
+            };
+
+            var lightStyle = new GUIStyle(baseStyle);
+            lightStyle.normal.background = _lightTex;
+
+            var darkStyle = new GUIStyle(baseStyle);
+            darkStyle.normal.background = _darkTex;
+
+            var selectedStyle = new GUIStyle(baseStyle);
+            selectedStyle.normal.background = _blueTex;
+
+            for (int i = 0; i < _target.traits.Length; i++)
+            {
+                var name = $"[{i:D3}] " + _target.traits[i].name;
+
+                if (!name.ToLower().Contains(_searchFieldText.ToLower()) && _searchFieldText.Length > 0) continue;
+
+                var idx = i;
+
+                var style = idx % 2 == 0 ? lightStyle : darkStyle;
+                var actualStyle = idx == _selectedTraitIdx ? selectedStyle : style;
+
+                if (GUILayout.Button(name, actualStyle, GUILayout.MinWidth(SidebarWidth - 20), GUILayout.ExpandWidth(true)))
+                {
+                    _selectedTraitIdx = idx;
+                }
+            }
+
             GUILayout.EndScrollView();
 
-            if (GUILayout.Button("Change Maximum ..."))
+            GUILayout.Space(5);
+
+            if (GUILayout.Button("Change Maximum ...", GUILayout.Width(SidebarWidth - 20)))
             {
-                ChangeMaximumModalUtility.Show(ref _target);
+                ChangeTraitCollectionMaximumModal.Show(ref _target);
                 GUIUtility.ExitGUI();
             }
         }
 
         private void OnGUITraitInspector()
         {
-            if (_selectedTraitIdx >= 0 && _selectedTraitIdx <= _target.Traits.Length)
+            if (_selectedTraitIdx >= 0 && _selectedTraitIdx <= _target.traits.Length && _target.traits.Length > 0)
             {
                 EditorGUILayout.BeginVertical();
 
                 GUILayout.Label("Name:");
-                _target.Traits[_selectedTraitIdx].Name = GUILayout.TextField(_target.Traits[_selectedTraitIdx].Name, 32, GUILayout.MaxWidth(250));
-                GUILayout.Space(5);
 
                 EditorGUILayout.BeginHorizontal();
-                EditorGUILayout.BeginVertical();
-                GUILayout.Label("Operator:");
-                _target.Traits[_selectedTraitIdx].@operator =
-                    (TraitOperator) EditorGUILayout.EnumPopup(_target.Traits[_selectedTraitIdx].@operator, GUILayout.MaxWidth(150));
-                EditorGUILayout.EndVertical();
+                GUILayout.Label($"[{_selectedTraitIdx:D3}]", new GUIStyle(GUI.skin.label)
+                {
+                    font = _consoleFont,
+                    fontSize = 14
+                });
+
+                if (_target.traits[_selectedTraitIdx] == null)
+                {
+                    _target.traits[_selectedTraitIdx] = new Trait()
+                    {
+                        category = TraitCategory.Attribute,
+                        effect = null,
+                        modifier =  null,
+                        name = "New Trait",
+                        notes = "",
+                        tags = new List<TraitTag>(),
+                        versions = new bool[0]
+                    };
+                }
+
+                _target.traits[_selectedTraitIdx].name = GUILayout.TextField(_target.traits[_selectedTraitIdx].name, 32, GUILayout.MaxWidth(250));
+                GUILayout.FlexibleSpace();
+                EditorGUILayout.EndHorizontal();
                 GUILayout.Space(5);
-                EditorGUILayout.BeginVertical();
+
+
                 GUILayout.Label("Category:");
-                _target.Traits[_selectedTraitIdx].Category =
-                    (TraitCategory) EditorGUILayout.EnumPopup(_target.Traits[_selectedTraitIdx].Category, GUILayout.MaxWidth(150));
-                EditorGUILayout.EndVertical();
+                _target.traits[_selectedTraitIdx].category =
+                    (TraitCategory) EditorGUILayout.EnumPopup(_target.traits[_selectedTraitIdx].category, GUILayout.MaxWidth(150));
+                GUILayout.Space(5);
+                
+                GUILayout.BeginHorizontal();
+                GUILayout.Label("Is Local Modifier?");
+                _target.traits[_selectedTraitIdx].isLocalModifier =
+                    GUILayout.Toggle(_target.traits[_selectedTraitIdx].isLocalModifier, "", GUILayout.Width(20));
                 GUILayout.FlexibleSpace();
-                EditorGUILayout.EndHorizontal();
+                GUILayout.EndHorizontal();
                 GUILayout.Space(5);
 
-                GUILayout.Label("Value:");
-                EditorGUILayout.BeginHorizontal();
-                _target.Traits[_selectedTraitIdx].ValueType =
-                    (ValueType) EditorGUILayout.EnumPopup(_target.Traits[_selectedTraitIdx].ValueType, GUILayout.MaxWidth(150));
-                _target.Traits[_selectedTraitIdx].IsPercentage = GUILayout.Toggle(_target.Traits[_selectedTraitIdx].IsPercentage, "%");
-                GUILayout.FlexibleSpace();
-                EditorGUILayout.EndHorizontal();
+                GUILayout.Label("Versions:");
+                var enums = (TraitVersion[]) Enum.GetValues(typeof(TraitVersion));
+
+                if (_target.traits[_selectedTraitIdx].versions == null)
+                {
+                    _target.traits[_selectedTraitIdx].versions = new bool[enums.Length];
+                }
+
+                if (_target.traits[_selectedTraitIdx].versions.Length != enums.Length || _target.traits[_selectedTraitIdx].versions.Length <= 0)
+                {
+                    Array.Resize(ref _target.traits[_selectedTraitIdx].versions, enums.Length);
+                }
+
+                for (int i = 0; i < enums.Length; i++)
+                {
+                    GUILayout.BeginHorizontal();
+                    _target.traits[_selectedTraitIdx].versions[i] =
+                        EditorGUILayout.ToggleLeft("", _target.traits[_selectedTraitIdx].versions[i], GUILayout.Width(14));
+                    GUILayout.Label(enums[i].ToString());
+                    GUILayout.FlexibleSpace();
+                    GUILayout.EndHorizontal();
+                }
+
                 GUILayout.Space(5);
 
 
@@ -183,12 +274,17 @@ namespace Ayaya
                 var darkStyle = new GUIStyle(GUIStyle.none);
                 darkStyle.normal.background = _darkTex;
 
+                if (_target.traits[_selectedTraitIdx].tags == null)
+                {
+                    _target.traits[_selectedTraitIdx].tags = new List<TraitTag>();
+                }
+
                 EditorGUILayout.BeginHorizontal(darkStyle, GUILayout.Width(TagListWidth * 2 + 10));
                 //Left List Start
                 EditorGUILayout.BeginVertical(GUILayout.Width(TagListWidth), GUILayout.Height(TagListHeight));
                 _leftTagListPosition = GUILayout.BeginScrollView(_leftTagListPosition);
                 int idx = 1;
-                foreach (var tag in _target.Traits[_selectedTraitIdx].Tags)
+                foreach (var tag in _target.traits[_selectedTraitIdx].tags)
                 {
                     var t = tag;
                     EditorGUILayout.BeginHorizontal(idx % 2 == 0 ? lightStyle : darkStyle);
@@ -196,7 +292,7 @@ namespace Ayaya
                     GUILayout.Label(tag.ToString());
                     if (GUILayout.Button(">", GUILayout.Width(20)))
                     {
-                        _target.Traits[_selectedTraitIdx].Tags = _target.Traits[_selectedTraitIdx].Tags.Where(traitTag => traitTag != t).ToArray();
+                        _target.traits[_selectedTraitIdx].tags.Remove(t);
                     }
 
                     EditorGUILayout.EndHorizontal();
@@ -218,15 +314,15 @@ namespace Ayaya
                 idx = 1;
                 foreach (var tag in (TraitTag[]) Enum.GetValues(typeof(TraitTag)))
                 {
-                    if (!_target.Traits[_selectedTraitIdx].Tags.Contains(tag))
+                    if (!_target.traits[_selectedTraitIdx].tags.Contains(tag))
                     {
                         var t = tag;
                         EditorGUILayout.BeginHorizontal(idx % 2 == 0 ? lightStyle : darkStyle);
                         idx++;
                         if (GUILayout.Button("<", GUILayout.Width(20)))
                         {
-                            Array.Resize(ref _target.Traits[_selectedTraitIdx].Tags, _target.Traits[_selectedTraitIdx].Tags.Length + 1);
-                            _target.Traits[_selectedTraitIdx].Tags[_target.Traits[_selectedTraitIdx].Tags.Length - 1] = t;
+                            // Array.Resize(ref _target.Traits[_selectedTraitIdx].Tags, _target.Traits[_selectedTraitIdx].Tags.Length + 1);
+                            _target.traits[_selectedTraitIdx].tags.Add(t);
                         }
 
                         GUILayout.Label(tag.ToString());
@@ -245,26 +341,27 @@ namespace Ayaya
                 EditorGUILayout.BeginHorizontal();
                 EditorGUILayout.BeginVertical();
                 GUILayout.Label("Effect:");
-                _target.Traits[_selectedTraitIdx].Effect = (Effect) EditorGUILayout.ObjectField(_target.Traits[_selectedTraitIdx].Effect, typeof(Effect), false, GUILayout.Width(200));
+                _target.traits[_selectedTraitIdx].effect =
+                    (Effect) EditorGUILayout.ObjectField(_target.traits[_selectedTraitIdx].effect, typeof(Effect), false, GUILayout.Width(200));
                 EditorGUILayout.EndVertical();
 
                 EditorGUILayout.BeginVertical();
 
                 GUILayout.Label("Modifier:");
-                _target.Traits[_selectedTraitIdx].Modifier =
-                    (Modifier) EditorGUILayout.ObjectField(_target.Traits[_selectedTraitIdx].Modifier, typeof(Modifier), false, GUILayout.Width(200));
+                _target.traits[_selectedTraitIdx].modifier =
+                    (Modifier) EditorGUILayout.ObjectField(_target.traits[_selectedTraitIdx].modifier, typeof(Modifier), false, GUILayout.Width(200));
                 EditorGUILayout.EndVertical();
 
                 GUILayout.FlexibleSpace();
-                
+
                 EditorGUILayout.EndHorizontal();
 
 
                 GUILayout.Space(5);
 
                 GUILayout.Label("Notes:");
-                _target.Traits[_selectedTraitIdx].Notes =
-                    GUILayout.TextArea(_target.Traits[_selectedTraitIdx].Notes, GUILayout.Height(60), GUILayout.Width(250));
+                _target.traits[_selectedTraitIdx].notes =
+                    GUILayout.TextArea(_target.traits[_selectedTraitIdx].notes, GUILayout.Height(60), GUILayout.Width(250));
 
                 EditorGUILayout.EndVertical();
             }

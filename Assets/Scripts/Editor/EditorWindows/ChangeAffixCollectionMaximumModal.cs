@@ -5,17 +5,17 @@ using UnityEngine;
 
 namespace Ayaya
 {
-    public class ChangeMaximumModalUtility : EditorWindow
+    public class ChangeAffixCollectionMaximumModal : EditorWindow
     {
-        public TraitCollection collection;
+        public AffixCollection collection;
         public int size;
         
-        public static void Show(ref TraitCollection traitCollection)
+        public static void Show(ref AffixCollection affixCollection)
         {
-            var window = ScriptableObject.CreateInstance(typeof(ChangeMaximumModalUtility)) as ChangeMaximumModalUtility;
+            var window = ScriptableObject.CreateInstance(typeof(ChangeAffixCollectionMaximumModal)) as ChangeAffixCollectionMaximumModal;
             window.titleContent = new GUIContent("Change Maximum");
-            window.collection = traitCollection;
-            window.size = traitCollection.Traits.Length;
+            window.collection = affixCollection;
+            window.size = affixCollection.affixes.Length;
             window.minSize = new Vector2(200, 75);
             window.maxSize = new Vector2(200, 75);
             window.ShowModalUtility();
@@ -29,7 +29,7 @@ namespace Ayaya
             EditorGUILayout.BeginHorizontal();
             if (GUILayout.Button("OK"))
             {
-                Array.Resize(ref collection.Traits, Mathf.Clamp(size, 0, 9999));
+                Array.Resize(ref collection.affixes, Mathf.Clamp(size, 0, 9999));
                 Close();
             }
 

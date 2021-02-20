@@ -11,6 +11,7 @@
         Speed,
         Cooldown,
         Duration,
-        Effect
+        Effect,
+        EnergyShield,
     }
 }
