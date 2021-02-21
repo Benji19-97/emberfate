@@ -108,12 +108,7 @@ namespace Editor.Windows.TraitCollectionEditor
 
             if (_target)
             {
-                GUILayout.BeginHorizontal();
-                GUILayout.Label(_target.name);
-                GUILayout.FlexibleSpace();
-                GUILayout.EndHorizontal();
                 GUILayout.Space(10);
-                
                 OnGUITraits();
             }
         }
