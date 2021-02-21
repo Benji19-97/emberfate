@@ -12,7 +12,7 @@ namespace Ayaya
         
         public static void Show(ref TraitCollection traitCollection)
         {
-            var window = ScriptableObject.CreateInstance(typeof(ChangeTraitCollectionMaximumModal)) as ChangeTraitCollectionMaximumModal;
+            var window = CreateInstance(typeof(ChangeTraitCollectionMaximumModal)) as ChangeTraitCollectionMaximumModal;
             window.titleContent = new GUIContent("Change Maximum");
             window.collection = traitCollection;
             window.size = traitCollection.traits.Length;

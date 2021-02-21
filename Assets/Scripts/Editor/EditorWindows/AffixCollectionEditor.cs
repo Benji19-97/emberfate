@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Runtime.Helpers;
 using Runtime.NewStuff;
 using UnityEditor;
 using UnityEngine;
@@ -26,11 +27,22 @@ namespace Ayaya
         private string[] traitCollectionsStrings;
         private string[][] availableTraitsStrings;
 
+        private int previewPowerLevel;
+        private int previewVarianceRoll;
+
         [MenuItem("Data/Affix Collection Editor")]
         private static void ShowWindow()
         {
             var window = GetWindow<AffixCollectionEditor>();
             window.titleContent = new GUIContent("Affix Collection Editor");
+            window.Show();
+        }
+
+        public static void ShowWindow(AffixCollection collection)
+        {
+            var window = GetWindow<AffixCollectionEditor>();
+            window.titleContent = new GUIContent("Affix Collection Editor");
+            window._newTarget = collection;
             window.Show();
         }
 
@@ -100,18 +112,35 @@ namespace Ayaya
 
         private void OnGUI()
         {
-            _newTarget = EditorGUILayout.ObjectField(_newTarget, typeof(AffixCollection), false) as AffixCollection;
+            GUILayout.BeginHorizontal();
+            _newTarget = EditorGUILayout.ObjectField(_newTarget, typeof(AffixCollection), false, GUILayout.Width(350)) as AffixCollection;
 
             if (_target)
             {
-                _target.traitCollectionDictionary =
-                    EditorGUILayout.ObjectField(_target.traitCollectionDictionary, typeof(TraitCollectionDictionary), false) as TraitCollectionDictionary;
+                if (GUILayout.Button("Save", GUILayout.Width(100)))
+                {
+                    EditorUtility.SetDirty(_target);
+                    AssetDatabase.SaveAssets();
+                }
+            }
 
-                if (GUILayout.Button("Refresh"))
+            GUILayout.EndHorizontal();
+
+            if (_target)
+            {
+                GUILayout.BeginHorizontal();
+                _target.traitCollectionDictionary =
+                    EditorGUILayout.ObjectField(_target.traitCollectionDictionary, typeof(TraitCollectionDictionary), false, GUILayout.Width(350)) as
+                        TraitCollectionDictionary;
+
+                if (GUILayout.Button("Refresh", GUILayout.Width(100)))
                 {
                     RefreshTraitCollectionStrings();
                 }
 
+                GUILayout.EndHorizontal();
+
+                GUILayout.Space(5);
 
                 if (_target.traitCollectionDictionary)
                 {
@@ -209,6 +238,15 @@ namespace Ayaya
         {
             if (_selectedAffixIdx >= 0 && _selectedAffixIdx <= _target.affixes.Length && _target.affixes.Length > 0)
             {
+                _target.affixes[_selectedAffixIdx].isLocked = EditorGUILayout.ToggleLeft("Lock", _target.affixes[_selectedAffixIdx].isLocked);
+
+                if (_target.affixes[_selectedAffixIdx].isLocked)
+                {
+                    OnGuiAffixIsLocked();
+                    return;
+                }
+
+
                 OnGuiName();
                 OnGuiAffixType();
 
@@ -254,7 +292,20 @@ namespace Ayaya
 
                         OnGuiSelectTraitIndex();
 
+                        GUILayout.BeginHorizontal();
+                        GUILayout.Label("Variance:");
+                        _target.affixes[_selectedAffixIdx].variance =
+                            EditorGUILayout.FloatField(_target.affixes[_selectedAffixIdx].variance, GUILayout.Width(35));
+                        GUILayout.Label((_target.affixes[_selectedAffixIdx].variance * 100f) + "%");
+                        GUILayout.FlexibleSpace();
+                        GUILayout.EndHorizontal();
+                        GUILayout.Space(5);
+
                         OnGuiSelectVersion();
+
+                        OnGuiValueInput();
+                        OnGuiInputReadableFormat();
+                        OnGuiReadablePreview();
                     }
                 }
             }
@@ -262,29 +313,52 @@ namespace Ayaya
 
         private void OnGuiName()
         {
-            _target.affixes[_selectedAffixIdx].name = GUILayout.TextField(_target.affixes[_selectedAffixIdx].name, 32);
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Name:");
+            _target.affixes[_selectedAffixIdx].name = GUILayout.TextField(_target.affixes[_selectedAffixIdx].name, 32, GUILayout.Width(200));
+            GUILayout.FlexibleSpace();
+            GUILayout.EndHorizontal();
+            GUILayout.Space(5);
         }
 
         private void OnGuiAffixType()
         {
-            _target.affixes[_selectedAffixIdx].affixType = (AffixType) EditorGUILayout.EnumPopup(_target.affixes[_selectedAffixIdx].affixType);
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Affix Type:");
+            _target.affixes[_selectedAffixIdx].affixType =
+                (AffixType) EditorGUILayout.EnumPopup(_target.affixes[_selectedAffixIdx].affixType, GUILayout.Width(100));
+            GUILayout.FlexibleSpace();
+            GUILayout.EndHorizontal();
+            GUILayout.Space(5);
         }
 
         private void OnGuiSelectCollectionIndex()
         {
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Trait Collection:");
             _target.affixes[_selectedAffixIdx].traitCollectionIdx =
-                EditorGUILayout.Popup(_target.affixes[_selectedAffixIdx].traitCollectionIdx, traitCollectionsStrings);
+                EditorGUILayout.Popup(_target.affixes[_selectedAffixIdx].traitCollectionIdx, traitCollectionsStrings, GUILayout.Width(150));
+            GUILayout.FlexibleSpace();
+            GUILayout.EndHorizontal();
+            GUILayout.Space(5);
         }
 
         private void OnGuiSelectTraitIndex()
         {
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Trait:");
             _target.affixes[_selectedAffixIdx].traitIdx =
                 EditorGUILayout.Popup(_target.affixes[_selectedAffixIdx].traitIdx,
-                    availableTraitsStrings[_target.affixes[_selectedAffixIdx].traitCollectionIdx]);
+                    availableTraitsStrings[_target.affixes[_selectedAffixIdx].traitCollectionIdx], GUILayout.Width(200));
+            GUILayout.FlexibleSpace();
+            GUILayout.EndHorizontal();
+            GUILayout.Space(5);
         }
 
         private void OnGuiSelectVersion()
         {
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Value Type:");
             var versions = _target.traitCollectionDictionary.traitCollections[_target.affixes[_selectedAffixIdx].traitCollectionIdx]
                 .traits[_target.affixes[_selectedAffixIdx].traitIdx].versions;
             var enums = Trait.ReturnSelectedElements(versions);
@@ -305,15 +379,228 @@ namespace Ayaya
 
             idx = EditorGUILayout.Popup(idx, enumStrings.ToArray());
 
-            var traitVersion = (TraitVersion) Enum.Parse(typeof(TraitVersion) ,enumStrings[idx]);
+            var traitVersion = (TraitVersion) Enum.Parse(typeof(TraitVersion), enumStrings[idx]);
 
             if (_target.affixes[_selectedAffixIdx].traitVersion != traitVersion)
             {
                 _target.affixes[_selectedAffixIdx].traitVersion = traitVersion;
             }
-            
-            GUILayout.Label(_target.affixes[_selectedAffixIdx].traitVersion.ToString());
 
-       }
+            var style = new GUIStyle(GUI.skin.label);
+            style.normal.textColor = Color.gray;
+            GUILayout.Label(_target.affixes[_selectedAffixIdx].traitVersion.ToString(), style);
+            GUILayout.FlexibleSpace();
+            GUILayout.EndHorizontal();
+            GUILayout.Space(5);
+        }
+
+        private void OnGuiValueInput()
+        {
+            switch (_target.affixes[_selectedAffixIdx].traitVersion)
+            {
+                case TraitVersion.AddsRemovesFixedFlat:
+                    OnGuiAddsRemoveFixedValues();
+                    break;
+                case TraitVersion.AddsRemovesFixedPercentage:
+                    OnGuiAddsRemoveFixedValues();
+                    break;
+                case TraitVersion.AddsRemovesRangeFlat:
+                    OnGuiAddsRemovesRangeFlatValues();
+                    break;
+                case TraitVersion.IncreasesReducesFixedPercentage:
+                    OnGuiAddsRemoveFixedValues();
+                    break;
+                case TraitVersion.MoreLessFixedPercentage:
+                    OnGuiAddsRemoveFixedValues();
+                    break;
+            }
+        }
+
+        private void OnGuiAddsRemoveFixedValues()
+        {
+            if (_target.affixes[_selectedAffixIdx].valuesPowerMin == null ||
+                _target.affixes[_selectedAffixIdx].valuesPowerMin.Length != 1)
+            {
+                _target.affixes[_selectedAffixIdx].valuesPowerMin = new float[1];
+            }
+
+            GUILayout.BeginHorizontal();
+
+
+            GUILayout.Label("Power (0):");
+            _target.affixes[_selectedAffixIdx].valuesPowerMin[0] =
+                EditorGUILayout.FloatField(_target.affixes[_selectedAffixIdx].valuesPowerMin[0], GUILayout.Width(40));
+            GUILayout.FlexibleSpace();
+            GUILayout.EndHorizontal();
+
+            if (_target.affixes[_selectedAffixIdx].valuesPowerMax == null ||
+                _target.affixes[_selectedAffixIdx].valuesPowerMax.Length != 1)
+            {
+                _target.affixes[_selectedAffixIdx].valuesPowerMax = new float[1];
+            }
+
+            GUILayout.Space(2);
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Power (60):");
+            _target.affixes[_selectedAffixIdx].valuesPowerMax[0] =
+                EditorGUILayout.FloatField(_target.affixes[_selectedAffixIdx].valuesPowerMax[0], GUILayout.Width(40));
+            GUILayout.FlexibleSpace();
+            GUILayout.EndHorizontal();
+            GUILayout.Space(10);
+        }
+
+        private void OnGuiAddsRemovesRangeFlatValues()
+        {
+            if (_target.affixes[_selectedAffixIdx].valuesPowerMin == null ||
+                _target.affixes[_selectedAffixIdx].valuesPowerMin.Length != 2)
+            {
+                _target.affixes[_selectedAffixIdx].valuesPowerMin = new float[2];
+            }
+
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Power (0):");
+            _target.affixes[_selectedAffixIdx].valuesPowerMin[0] =
+                EditorGUILayout.FloatField(_target.affixes[_selectedAffixIdx].valuesPowerMin[0], GUILayout.Width(40));
+            GUILayout.Label("to");
+            _target.affixes[_selectedAffixIdx].valuesPowerMin[1] =
+                EditorGUILayout.FloatField(_target.affixes[_selectedAffixIdx].valuesPowerMin[1], GUILayout.Width(40));
+            GUILayout.FlexibleSpace();
+            GUILayout.EndHorizontal();
+
+            if (_target.affixes[_selectedAffixIdx].valuesPowerMax == null ||
+                _target.affixes[_selectedAffixIdx].valuesPowerMax.Length != 2)
+            {
+                _target.affixes[_selectedAffixIdx].valuesPowerMax = new float[2];
+            }
+
+            GUILayout.Space(2);
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Power (60):");
+            _target.affixes[_selectedAffixIdx].valuesPowerMax[0] =
+                EditorGUILayout.FloatField(_target.affixes[_selectedAffixIdx].valuesPowerMax[0], GUILayout.Width(40));
+            GUILayout.Label("to");
+            _target.affixes[_selectedAffixIdx].valuesPowerMax[1] =
+                EditorGUILayout.FloatField(_target.affixes[_selectedAffixIdx].valuesPowerMax[1], GUILayout.Width(40));
+            GUILayout.FlexibleSpace();
+            GUILayout.EndHorizontal();
+            GUILayout.Space(10);
+        }
+
+        private void OnGuiInputReadableFormat()
+        {
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Readable Format:");
+            _target.affixes[_selectedAffixIdx].readableFormat = GUILayout.TextField(_target.affixes[_selectedAffixIdx].readableFormat, GUILayout.Width(300));
+            GUILayout.FlexibleSpace();
+            GUILayout.EndHorizontal();
+        }
+
+        private void OnGuiReadablePreview()
+        {
+
+
+            var readablePreview = _target.affixes[_selectedAffixIdx].readableFormat;
+
+            var style = new GUIStyle(GUI.skin.label);
+            style.normal.textColor = Color.yellow;
+            GUILayout.Label("Preview:");
+
+            GUILayout.BeginHorizontal();
+            previewPowerLevel = EditorGUILayout.IntSlider(previewPowerLevel, 0, 60, GUILayout.Width(150));
+            GUILayout.Label("Power");
+            GUILayout.FlexibleSpace();
+            GUILayout.EndHorizontal();
+
+            GUILayout.BeginHorizontal();
+            previewVarianceRoll = EditorGUILayout.IntSlider(previewVarianceRoll, 0, 100, GUILayout.Width(150));
+            GUILayout.Label("Variance Roll");
+            GUILayout.FlexibleSpace();
+            GUILayout.EndHorizontal();
+            var value = _target.affixes[_selectedAffixIdx].GetValueRolledAndScaled(previewVarianceRoll, previewPowerLevel);
+
+            try
+            {
+                if (_target.affixes[_selectedAffixIdx].valuesPowerMin.Length == 1 &&
+                    readablePreview.Contains("{0}"))
+                {
+                    string valueString = value[0].ToString();
+
+                    if (_target.affixes[_selectedAffixIdx].traitVersion == TraitVersion.AddsRemovesFixedPercentage ||
+                        _target.affixes[_selectedAffixIdx].traitVersion == TraitVersion.IncreasesReducesFixedPercentage ||
+                        _target.affixes[_selectedAffixIdx].traitVersion == TraitVersion.MoreLessFixedPercentage)
+                    {
+                        valueString = (value[0] * 100f) + "%";
+                    }
+
+                    GUILayout.Label(String.Format(readablePreview, valueString), style);
+                }
+
+                if (_target.affixes[_selectedAffixIdx].valuesPowerMin.Length == 2 &&
+                    readablePreview.Contains("{0}") &&
+                    readablePreview.Contains("{1}"))
+                {
+                    GUILayout.Label(String.Format(readablePreview, value[0],
+                        value[1]), style);
+                }
+            }
+            catch (FormatException e)
+            {
+                return;
+            }
+        }
+
+        private void OnGuiAffixIsLocked()
+        {
+            var style = new GUIStyle(GUI.skin.label);
+            style.normal.textColor = Color.grey;
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Name:");
+            GUILayout.Label(_target.affixes[_selectedAffixIdx].name, style);
+            GUILayout.FlexibleSpace();
+            GUILayout.EndHorizontal();
+            GUILayout.Space(3);
+
+
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Affix Type:");
+            GUILayout.Label(_target.affixes[_selectedAffixIdx].affixType.ToString(), style);
+            GUILayout.FlexibleSpace();
+            GUILayout.EndHorizontal();
+            GUILayout.Space(3);
+
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Collection:");
+            GUILayout.Label(_target.affixes[_selectedAffixIdx].traitCollectionIdx.ToString(), style);
+            GUILayout.Label("=> " + _target.traitCollectionDictionary.traitCollections[_target.affixes[_selectedAffixIdx].traitCollectionIdx].ToString(), style);
+            GUILayout.FlexibleSpace();
+            GUILayout.EndHorizontal();
+            GUILayout.Space(3);
+
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Trait:");
+            GUILayout.Label(_target.affixes[_selectedAffixIdx].traitIdx.ToString(), style);
+            GUILayout.Label(
+                "=> " + _target.traitCollectionDictionary.traitCollections[_target.affixes[_selectedAffixIdx].traitCollectionIdx]
+                    .traits[_target.affixes[_selectedAffixIdx].traitIdx].name, style);
+            GUILayout.FlexibleSpace();
+            GUILayout.EndHorizontal();
+            GUILayout.Space(3);
+            
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Variance:");
+            GUILayout.Label((_target.affixes[_selectedAffixIdx].variance * 100f) + "%", style);
+            GUILayout.FlexibleSpace();
+            GUILayout.EndHorizontal();
+            GUILayout.Space(3);
+            
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Readable Format:");
+            GUILayout.Label(_target.affixes[_selectedAffixIdx].readableFormat, style);
+            GUILayout.FlexibleSpace();
+            GUILayout.EndHorizontal();
+            GUILayout.Space(3);
+            
+            OnGuiReadablePreview();
+        }
     }
 }

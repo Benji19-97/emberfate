@@ -1,17 +1,12 @@
-﻿using System;
+﻿using System.Collections.Generic;
+using UnityEngine;
 
 namespace Runtime.NewStuff
 {
-    [Serializable]
-    public struct AffixReference
+    [CreateAssetMenu(fileName = "NewAffixPool", menuName = "Data/Create Affix Pool", order = 0)]
+    public class AffixPool : ScriptableObject
     {
-        public int affixIndex;
-        public int weighting;
-    }
-    
-    [Serializable]
-    public class AffixPool
-    {
-        public AffixCollection affixCollection;
+        public AffixCollection collection;
+        public List<AffixReference> affixes;
     }
 }

@@ -25,6 +25,7 @@ namespace Runtime.NewStuff
             category = TraitCategory.Attribute;
             tags = new List<TraitTag>();
             notes = "";
+            isLocked = false;
         }
 
         public string name;
@@ -35,6 +36,7 @@ namespace Runtime.NewStuff
         public List<TraitTag> tags; 
         public string notes;
         public bool isLocalModifier;
+        public bool isLocked;
         
         public static List<TraitVersion> ReturnSelectedElements(int versions)
         {

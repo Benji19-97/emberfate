@@ -197,6 +197,14 @@ namespace Ayaya
         {
             if (_selectedTraitIdx >= 0 && _selectedTraitIdx <= _target.traits.Length && _target.traits.Length > 0)
             {
+                _target.traits[_selectedTraitIdx].isLocked = EditorGUILayout.ToggleLeft("Lock", _target.traits[_selectedTraitIdx].isLocked);
+                
+                if (_target.traits[_selectedTraitIdx].isLocked)
+                {
+                    OnGuiTraitIsLocked();
+                    return;
+                }
+
                 EditorGUILayout.BeginVertical();
 
                 GUILayout.Label("Name:");
@@ -357,6 +365,71 @@ namespace Ayaya
 
                 EditorGUILayout.EndVertical();
             }
+        }
+
+        private void OnGuiTraitIsLocked()
+        {
+            var style = new GUIStyle(GUI.skin.label);
+            style.normal.textColor = Color.grey;
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Name:" );
+            GUILayout.Label(_target.traits[_selectedTraitIdx].name, style);
+            GUILayout.FlexibleSpace();
+            GUILayout.EndHorizontal();
+            GUILayout.Space(3);
+
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Category:" );
+            GUILayout.Label(_target.traits[_selectedTraitIdx].category.ToString(), style);
+            GUILayout.FlexibleSpace();
+            GUILayout.EndHorizontal();
+            GUILayout.Space(3);
+            
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Is Local?");
+            GUILayout.Label(_target.traits[_selectedTraitIdx].isLocalModifier.ToString(), style);
+            GUILayout.FlexibleSpace();
+            GUILayout.EndHorizontal();
+            GUILayout.Space(3);
+
+            GUILayout.Label("Versions: ");
+            foreach (var traitVersion in Trait.ReturnSelectedElements(_target.traits[_selectedTraitIdx].versions))
+            {
+                GUILayout.Label("> " + traitVersion, style);
+            }
+            GUILayout.Space(6);
+            
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Tags: ");
+            foreach (var tag in _target.traits[_selectedTraitIdx].tags)
+            {
+                GUILayout.Label(tag + ", ", style);
+            }
+            GUILayout.FlexibleSpace();
+            GUILayout.EndHorizontal();
+            GUILayout.Space(3);
+
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Effect: ");
+            var effectString = _target.traits[_selectedTraitIdx].effect != null ? _target.traits[_selectedTraitIdx].effect.ToString() : "null";
+            GUILayout.Label(effectString, style);
+            GUILayout.FlexibleSpace();
+            GUILayout.EndHorizontal();
+            GUILayout.Space(3);
+
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Modifier: ");
+            var modifierString = _target.traits[_selectedTraitIdx].modifier != null ? _target.traits[_selectedTraitIdx].modifier.ToString() : "null";
+            GUILayout.Label(modifierString, style);
+            GUILayout.FlexibleSpace();
+            GUILayout.EndHorizontal();
+            GUILayout.Space(3);
+
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Notes: ");
+            GUILayout.Label(_target.traits[_selectedTraitIdx].notes, style);
+            GUILayout.FlexibleSpace();
+            GUILayout.EndHorizontal();
         }
     }
 }

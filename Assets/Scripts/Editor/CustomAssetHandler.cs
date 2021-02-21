@@ -15,6 +15,16 @@ namespace Editor
                     TraitCollectionEditor.ShowWindow(Selection.activeObject as TraitCollection);
                     return true; 
                 }
+                
+                if (Selection.activeObject as AffixCollection != null) {
+                    AffixCollectionEditor.ShowWindow(Selection.activeObject as AffixCollection);
+                    return true; 
+                }
+                
+                if (Selection.activeObject as AffixPool != null) {
+                    AffixPoolEditor.ShowWindow(Selection.activeObject as AffixPool);
+                    return true; 
+                }
 
                 return false;
             }
