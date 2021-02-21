@@ -1,12 +1,15 @@
-﻿using Ayaya;
+﻿using Editor.Windows.AffixCollectionEditor;
+using Editor.Windows.AffixPoolEditor;
+using Editor.Windows.TraitCollectionEditor;
+using Runtime.Affixes.Serializable;
 using Runtime.NewStuff;
+using Runtime.Traits.Serializable;
 using UnityEditor;
 using UnityEditor.Callbacks;
-using UnityEngine;
 
 namespace Editor
 {
-    public class CustomAssetHandler
+    public static class CustomAssetHandler
     {
         [OnOpenAsset(1)]
             public static bool step1(int instanceID, int line)
